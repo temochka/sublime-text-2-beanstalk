@@ -1,0 +1,10 @@
+[
+  {
+    "caption": "Beanstalk: Open File",
+    "command": "beanstalk_open"
+  },
+  {
+    "caption": "Beanstalk: Blame",
+    "command": "beanstalk_blame"
+  }
+]

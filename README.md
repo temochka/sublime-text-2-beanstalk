@@ -6,7 +6,8 @@ A set of handy tools for using Sublime Text 2 editor with Beanstalkapp (http://b
 
 ## Usage ##
 
-* Use `Cmd + Shift + ^` to open currently edited file in Beanstalk.
+* Press `Cmd + Shit + P` and select `Beanstalk: Open File` or just press `Cmd + Shift + ^` to open currently edited file in Beanstalk.
+* Press `Cmd + Shit + P` and select `Beanstalk: Blame` to open blame for currently edited file in Beanstalk.
 * More features will be available later.
 
 ## Get it installed ##
@@ -20,7 +21,7 @@ git clone git://github.com/temochka/sublime-text-2-beanstalk.git Beanstalk
 
 ### Linux & Windows ###
 
-Sorry, but Beanstalk tools are currently only available for OS X users.
+Sorry, but Beanstalk tools are currently available only for OS X users.
 
 ## Known issues ##
 
