@@ -15,7 +15,7 @@ A set of handy tools for using Sublime Text 2 editor with Beanstalkapp (http://b
 
 ```bash
 cd ~/Library/Application Support/Sublime Text 2/Packages
-git clone git://github.com/temochka/sublime-text-2-beanstalk.git
+git clone git://github.com/temochka/sublime-text-2-beanstalk.git Beanstalk
 ```
 
 ### Linux & Windows ###
