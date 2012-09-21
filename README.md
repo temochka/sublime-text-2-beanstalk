@@ -6,7 +6,7 @@ A set of handy tools for using Sublime Text 2 editor with Beanstalkapp (http://b
 
 ## Usage ##
 
-Open the root directory of your Git or Subversion working copy.
+Open the root directory of your Git or Subversion working copy in Sublime Text 2.
 
 * Press `Cmd + Shit + P` and select `Beanstalk: Open File` or just press `Cmd + Shift + ^` to open currently edited file in Beanstalk.
 * Press `Cmd + Shit + P` and select `Beanstalk: Blame` to open blame for currently edited file in Beanstalk.
