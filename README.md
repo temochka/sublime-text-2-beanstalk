@@ -17,7 +17,7 @@ Open the root directory of your Git or Subversion working copy.
 ### On Mac ###
 
 ```bash
-cd ~/Library/Application Support/Sublime Text 2/Packages
+cd ~/Library/Application\ Support/Sublime\ Text\ 2/Packages/
 git clone git://github.com/temochka/sublime-text-2-beanstalk.git Beanstalk
 ```
 
