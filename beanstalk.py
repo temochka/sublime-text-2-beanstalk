@@ -18,7 +18,8 @@ class GitRepo:
       raise NotAGitRepositoryError
 
   def git(self, command):
-    return os.popen("cd %s && git %s" %(self.path, command)).read()
+    os.chdir(self.path)
+    return os.popen("git %s" % command).read()
 
   def repository_path(self):
     repository_path = self.parse_repository(self.git("remote -v"))
@@ -49,7 +50,8 @@ class GitRepo:
     return m[0] if m else None
 
   def is_git(self):
-    code = os.system('cd %s && git rev-parse' % self.path)
+    os.chdir(self.path)
+    code = os.system('git rev-parse')
     return not code
 
 class SvnRepo:
@@ -59,7 +61,8 @@ class SvnRepo:
       raise NotASvnRepositoryError
 
   def svn(self, command):
-    return os.popen("cd %s && svn %s --xml" %(self.path, command)).read()
+    os.chdir(self.path)
+    return os.popen("svn %s --xml" %(command)).read()
 
   def repository_path(self):
     repository_path = self.parse_repository(self.svn("info"))
@@ -97,7 +100,8 @@ class SvnRepo:
     return dom.getElementsByTagName("commit")[0].attributes["revision"].value
 
   def is_svn(self):
-    code = os.system('cd %s && svn info' % self.path)
+    os.chdir(self.path)
+    code = os.system('svn info')
     return not code
 
 class Plugin:
