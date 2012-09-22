@@ -1,5 +1,4 @@
-import sublime, sublime_plugin
-import os
+import sublime, sublime_plugin, webbrowser
 from beanstalk import *
 
 class BeanstalkBlameCommand(sublime_plugin.WindowCommand):
@@ -22,6 +21,6 @@ class BeanstalkBlameCommand(sublime_plugin.WindowCommand):
       return
 
     try:
-      os.system("open \"%s\"" % repo.blame_file_url(plugin.relative_filename()))
+      webbrowser.open_new_tab(repo.blame_file_url(plugin.relative_filename()))
     except NotABeanstalkRepositoryError:
       pass

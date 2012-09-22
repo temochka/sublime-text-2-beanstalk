@@ -30,7 +30,7 @@ class GitRepo:
     return self.parse_branch(self.git("branch"))
 
   def revision(self):
-    return self.git("rev-parse HEAD")
+    return self.git("rev-parse HEAD").strip()
 
   def browse_file_url(self, filename):
     return Beanstalk.GitBrowseFileUrl(self.repository_path(), filename, self.branch())
