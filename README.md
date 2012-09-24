@@ -28,9 +28,14 @@ cd ~/.config/sublime-text-2/Packages/
 git clone git://github.com/temochka/sublime-text-2-beanstalk.git Beanstalk
 ```
 
-### Windows ###
+### On Windows ###
 
-Sorry, but Beanstalk tools are currently available only for OS X and Linux users.
+```
+cd %APPDATA%/Sublime Text 2/Packages/
+git clone git://github.com/temochka/sublime-text-2-beanstalk.git Beanstalk
+```
+
+Make sure you have included all required binaries (`git`, `svn`) in your PATH.
 
 ## Known issues ##
 

@@ -1,0 +1,3 @@
+[
+    { "keys": ["ctrl+shift+6"], "command": "beanstalk_open" }
+]
