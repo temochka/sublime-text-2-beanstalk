@@ -6,5 +6,9 @@
   {
     "caption": "Beanstalk: Blame",
     "command": "beanstalk_blame"
+  },
+  {
+    "caption": "Beanstalk: Preview",
+    "command": "beanstalk_preview"
   }
 ]

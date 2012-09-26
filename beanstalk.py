@@ -1,14 +1,15 @@
 import sublime, sublime_plugin
 from xml.dom.minidom import parseString
 import re, os
+from functools import wraps
 
-class NotASvnRepositoryError(RuntimeError):
+class NotASvnRepositoryError(Exception):
   pass
 
-class NotAGitRepositoryError(RuntimeError):
+class NotAGitRepositoryError(Exception):
   pass
 
-class NotABeanstalkRepositoryError(RuntimeError):
+class NotABeanstalkRepositoryError(Exception):
   pass
 
 class GitRepo:
@@ -16,6 +17,8 @@ class GitRepo:
     self.path = path
     if not self.is_git():
       raise NotAGitRepositoryError
+
+    self.repository_path = self.repository_path()
 
   def git(self, command):
     os.chdir(self.path)
@@ -34,10 +37,13 @@ class GitRepo:
     return self.git("rev-parse HEAD").strip()
 
   def browse_file_url(self, filename):
-    return Beanstalk.GitBrowseFileUrl(self.repository_path(), filename, self.branch())
+    return git_browse_file_url(self.repository_path, filename, self.branch())
 
   def blame_file_url(self, filename):
-    return Beanstalk.GitBlameFileUrl(self.repository_path(), filename, self.revision(), self.branch())
+    return git_blame_file_url(self.repository_path, filename, self.revision(), self.branch())
+
+  def preview_file_url(self, filename):
+    return git_preview_file_url(self.repository_path, filename, self.revision(), self.branch())
 
   def parse_repository(self, remotes):
     p = re.compile("\@(.+\.beanstalkapp\.com.*?)\.git")
@@ -60,6 +66,8 @@ class SvnRepo:
     if not self.is_svn():
       raise NotASvnRepositoryError
 
+    self.repository_path = self.repository_path()
+
   def svn(self, command):
     os.chdir(self.path)
     return os.popen("svn %s --xml" %(command)).read()
@@ -77,10 +85,13 @@ class SvnRepo:
     return self.parse_revision(self.svn("info"))
 
   def browse_file_url(self, filename):
-    return Beanstalk.SvnBrowseFileUrl(self.repository_path(), filename, self.branch())
+    return svn_browse_file_url(self.repository_path, filename, self.branch())
 
   def blame_file_url(self, filename):
-    return Beanstalk.SvnBlameFileUrl(self.repository_path(), filename, self.revision(), self.branch())
+    return svn_blame_file_url(self.repository_path, filename, self.revision(), self.branch())
+
+  def preview_file_url(self, filename):
+    return svn_preview_file_url(self.repository_path, filename, self.revision(), self.branch())
 
   def parse_repository(self, info):
     dom = parseString(info)
@@ -104,30 +115,51 @@ class SvnRepo:
     code = os.system('svn info')
     return not code
 
-class Plugin:
-  def __init__(self, window):
-    self.window = window
-
+class BeanstalkWindowCommand(sublime_plugin.WindowCommand):
   def rootdir(self):
     return self.window.folders()[0]
 
   def relative_filename(self):
     return self.window.active_view().file_name().replace(self.rootdir(), "")
 
-class Beanstalk:
-  @staticmethod
-  def GitBrowseFileUrl(repository, filepath, branch='master'):
-    return "https://%s/browse/git%s?branch=%s" %(repository, filepath, branch)
+  @property
+  def repository(self):
+    try:
+      return GitRepo(self.rootdir())
+    except (NotAGitRepositoryError, NotABeanstalkRepositoryError):
+      pass
 
-  @staticmethod
-  def SvnBrowseFileUrl(repository, filepath, branch='master'):
-    return "https://%s/browse/%s%s" %(repository, branch, filepath)
+    try:
+      return SvnRepo(self.rootdir())
+    except (NotASvnRepositoryError, NotABeanstalkRepositoryError):
+      pass
 
-  @staticmethod
-  def SvnBlameFileUrl(repository, filepath, revision, branch='master'):
-    return "https://%s/blame/%s%s?rev=%s" %(repository, branch, filepath, revision)
+    raise Exception
 
-  @staticmethod
-  def GitBlameFileUrl(repository, filepath, revision, branch='master'):
-    return "https://%s/blame%s?branch=%s&rev=%s" %(repository, filepath, branch, revision)
 
+def with_repo(func):
+  @wraps(func)
+  def wrapper(self):
+    try:
+      return func(self, self.repository)
+    except Exception:
+      sublime.message_dialog("Beanstalk Subversion or Git repository not found.")
+  return wrapper
+
+
+def git_browse_file_url(repository, filepath, branch='master'):
+  return "https://%s/browse/git%s?branch=%s" % (repository, filepath, branch)
+
+def git_blame_file_url(repository, filepath, revision, branch='master'):
+  return "https://%s/blame%s?branch=%s&rev=%s" % (repository, filepath, branch, revision)
+
+def git_preview_file_url(repository, filepath, revision, branch='master'):
+  return "https://%s/previews%s?back_to=file&branch=%s&rev=%s" % (repository, filepath, branch, revision)
+
+def svn_browse_file_url(repository, filepath, branch='master'):
+  return "https://%s/browse/%s%s" % (repository, branch, filepath)
+
+def svn_blame_file_url(repository, filepath, revision, branch='master'):
+  return "https://%s/blame/%s%s?rev=%s" % (repository, branch, filepath, revision)
+
+svn_preview_file_url = git_preview_file_url
