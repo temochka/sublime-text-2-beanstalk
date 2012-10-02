@@ -117,13 +117,18 @@ class SvnRepo:
 
 class BeanstalkWindowCommand(sublime_plugin.WindowCommand):
   def rootdir(self):
-    return self.window.folders()[0]
+    folders = self.window.folders()
+    return [i for i in folders if self.file_name().startswith(i + os.sep)][0]
 
   def relative_filename(self):
-    return self.window.active_view().file_name().replace(self.rootdir(), "")
+    return self.file_name().replace(self.rootdir(), "")
+
+  def file_name(self):
+    return self.window.active_view().file_name()
 
   @property
   def repository(self):
+    print self.rootdir()
     try:
       return GitRepo(self.rootdir())
     except (NotAGitRepositoryError, NotABeanstalkRepositoryError):
