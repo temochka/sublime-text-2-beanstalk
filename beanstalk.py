@@ -124,13 +124,11 @@ class SvnRepo:
 
 class BeanstalkWindowCommand(sublime_plugin.WindowCommand):
   def rootdir(self):
-    print "folders"
     folders = self.window.folders()
     return [i for i in folders if self.filename().startswith(i + os.sep)][0]
 
   def relative_filename(self):
     _, _, filename = self.filename().partition(self.rootdir())
-    print filename
     return filename
 
   def filename(self):
@@ -138,7 +136,6 @@ class BeanstalkWindowCommand(sublime_plugin.WindowCommand):
 
   @property
   def repository(self):
-    print "repository"
     try:
       return GitRepo(self.rootdir())
     except (NotAGitRepositoryError, NotABeanstalkRepositoryError):
@@ -155,10 +152,10 @@ class BeanstalkWindowCommand(sublime_plugin.WindowCommand):
 def with_repo(func):
   @wraps(func)
   def wrapper(self):
-    # try:
+    try:
     return func(self, self.repository)
-    # except Exception:
-    #   sublime.message_dialog("Beanstalk Subversion or Git repository not found.")
+    except Exception:
+      sublime.message_dialog("Beanstalk Subversion or Git repository not found.")
   return wrapper
 
 
