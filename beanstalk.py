@@ -153,7 +153,7 @@ def with_repo(func):
   @wraps(func)
   def wrapper(self):
     try:
-    return func(self, self.repository)
+      return func(self, self.repository)
     except Exception:
       sublime.message_dialog("Beanstalk Subversion or Git repository not found.")
   return wrapper
