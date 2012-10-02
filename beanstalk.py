@@ -22,7 +22,7 @@ class GitRepo:
 
   def git(self, command):
     os.chdir(self.path)
-    return os.popen("git %s" % command).read()
+    return os.popen("git %s" % command).read().strip()
 
   def repository_path(self):
     repository_path = self.parse_repository(self.git("remote -v"))
@@ -30,20 +30,27 @@ class GitRepo:
       raise NotABeanstalkRepositoryError
     return repository_path
 
+  def path_from_rootdir(self, filename):
+    rootdir = self.git("rev-parse --show-toplevel")
+    if self.path != rootdir:
+      _, _, path_from_rootdir = self.path.partition(rootdir)
+      return path_from_rootdir + '/' + filename
+    return filename
+
   def branch(self):
     return self.parse_branch(self.git("branch"))
 
   def revision(self):
-    return self.git("rev-parse HEAD").strip()
+    return self.git("rev-parse HEAD")
 
   def browse_file_url(self, filename):
-    return git_browse_file_url(self.repository_path, filename, self.branch())
+    return git_browse_file_url(self.repository_path, self.path_from_rootdir(filename), self.branch())
 
   def blame_file_url(self, filename):
-    return git_blame_file_url(self.repository_path, filename, self.revision(), self.branch())
+    return git_blame_file_url(self.repository_path, self.path_from_rootdir(filename), self.revision(), self.branch())
 
   def preview_file_url(self, filename):
-    return git_preview_file_url(self.repository_path, filename, self.revision(), self.branch())
+    return git_preview_file_url(self.repository_path, self.path_from_rootdir(filename), self.revision(), self.branch())
 
   def parse_repository(self, remotes):
     p = re.compile("\@(.+\.beanstalkapp\.com.*?)\.git")
@@ -117,18 +124,21 @@ class SvnRepo:
 
 class BeanstalkWindowCommand(sublime_plugin.WindowCommand):
   def rootdir(self):
+    print "folders"
     folders = self.window.folders()
-    return [i for i in folders if self.file_name().startswith(i + os.sep)][0]
+    return [i for i in folders if self.filename().startswith(i + os.sep)][0]
 
   def relative_filename(self):
-    return self.file_name().replace(self.rootdir(), "")
+    _, _, filename = self.filename().partition(self.rootdir())
+    print filename
+    return filename
 
-  def file_name(self):
+  def filename(self):
     return self.window.active_view().file_name()
 
   @property
   def repository(self):
-    print self.rootdir()
+    print "repository"
     try:
       return GitRepo(self.rootdir())
     except (NotAGitRepositoryError, NotABeanstalkRepositoryError):
@@ -145,10 +155,10 @@ class BeanstalkWindowCommand(sublime_plugin.WindowCommand):
 def with_repo(func):
   @wraps(func)
   def wrapper(self):
-    try:
-      return func(self, self.repository)
-    except Exception:
-      sublime.message_dialog("Beanstalk Subversion or Git repository not found.")
+    # try:
+    return func(self, self.repository)
+    # except Exception:
+    #   sublime.message_dialog("Beanstalk Subversion or Git repository not found.")
   return wrapper
 
 

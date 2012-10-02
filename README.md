@@ -6,7 +6,7 @@ A set of handy tools for using Sublime Text 2 editor with Beanstalkapp (http://b
 
 ## Usage ##
 
-Open the root directory of your Git or Subversion working copy in Sublime Text 2.
+Open any directory of your Git or Subversion working copy in Sublime Text 2.
 
 * Press `Ctrl + Shift + P` and select `Beanstalk: Open File` or just press `Ctrl + Shift + ^` to open currently edited file in Beanstalk.
 * Press `Ctrl + Shift + P` and select `Beanstalk: Blame` to open blame for currently edited file in Beanstalk.
@@ -17,9 +17,9 @@ Use `Cmd` instead of `Ctrl` on Mac OS X.
 
 ## Get it installed ##
 
-### With Package Control ###
+### With The Package Control Plugin ###
 
-With the Package Control plugin: The easiest way to install Beanstalk Tools is through Package Control, which can be found at this site: http://wbond.net/sublime_packages/package_control.
+The easiest way to install Beanstalk Tools is through Package Control, which can be found at this site: http://wbond.net/sublime_packages/package_control.
 
 Once you get Package Control installed, restart Sublime Text 2 and bring up the Command Palette by pressing `Ctrl + Shift + P`. Select `Package Control: Install Package`, wait while Package Control fetches the latest package list, then select `Beanstalk Tools` from the dropdown. The advantage of using this method is that Package Control will automatically keep the plugin version up to date.
 
