@@ -117,7 +117,7 @@ class SvnRepo:
     url = dom.getElementsByTagName('url')[0].firstChild.data
     p = re.compile("beanstalkapp\.com\/.+?\/(.*)")
     m = p.findall(url)
-    return m[0] if m else None
+    return m[0] if m else ""
 
   def parse_revision(self, info):
     dom = parseString(info)
