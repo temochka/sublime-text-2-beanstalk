@@ -53,9 +53,8 @@ class GitRepo:
     return git_preview_file_url(self.repository_path, self.path_from_rootdir(filename), self.revision(), self.branch())
 
   def parse_repository(self, remotes):
-    p = re.compile("\@(.+\.beanstalkapp\.com.*?)\.git")
-    m = p.findall(remotes)
-    return m[0].replace(":", "") if m else None
+    remotes = list(set(map(lambda l: re.split("\s", l)[1], remotes.splitlines())))
+    return self.make_repository_url(remotes)
 
   def parse_branch(self, branches):
     p = re.compile("\* (.+)")
@@ -66,6 +65,15 @@ class GitRepo:
     os.chdir(self.path)
     code = os.system('git rev-parse')
     return not code
+
+  def make_repository_url(self, remotes):
+    for r in remotes:
+      if r.startswith('git@') and 'beanstalkapp.com' in r:
+        print r
+        return r[4:-4].replace(":", "")
+      elif r.startswith('https://') and 'git.beanstalkapp.com' in r:
+        print r
+        return r[8:-4].replace("git.beanstalkapp.com", "beanstalkapp.com")
 
 class SvnRepo:
   def __init__(self, path):
