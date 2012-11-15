@@ -69,11 +69,9 @@ class GitRepo:
   def make_repository_url(self, remotes):
     for r in remotes:
       if r.startswith('git@') and 'beanstalkapp.com' in r:
-        print r
         return r[4:-4].replace(":", "")
       elif r.startswith('https://') and 'git.beanstalkapp.com' in r:
-        print r
-        return r[8:-4].replace("git.beanstalkapp.com", "beanstalkapp.com")
+        return r[8:-4].replace("git.beanstalkapp.com", "beanstalkapp.com").split("@")[-1]
 
 class SvnRepo:
   def __init__(self, path):
