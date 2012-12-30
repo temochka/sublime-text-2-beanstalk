@@ -74,6 +74,9 @@ class GitRepo:
       elif r.startswith('https://') and 'git.beanstalkapp.com' in r:
         return r[8:-4].replace("git.beanstalkapp.com", "beanstalkapp.com").split("@")[-1]
 
+  def activity_url(self):
+    return activity_url(self.repository_path)
+
 class SvnRepo:
   def __init__(self, path):
     self.path = path
@@ -129,6 +132,9 @@ class SvnRepo:
     code = os.system('svn info')
     return not code
 
+  def activity_url(self):
+    return activity_url(self.repository_path)
+
 class BeanstalkWindowCommand(sublime_plugin.WindowCommand):
   def rootdir(self):
     if self.filename():
@@ -180,6 +186,9 @@ def with_repo(func):
 
 def strip_leading_slashes(path):
   return path.lstrip('/')
+
+def activity_url(repository):
+  return "https://%s" % (repository)
 
 def git_browse_file_url(repository, filepath, branch='master'):
   return "https://%s/browse/git/%s?branch=%s" % (repository, filepath, branch)

@@ -10,5 +10,9 @@
   {
     "caption": "Beanstalk: Preview",
     "command": "beanstalk_preview"
+  },
+  {
+    "caption": "Beanstalk: Activity",
+    "command": "beanstalk_activity"
   }
 ]
