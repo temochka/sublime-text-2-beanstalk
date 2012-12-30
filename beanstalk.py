@@ -1,5 +1,6 @@
 import sublime, sublime_plugin
 from xml.dom.minidom import parseString
+from os.path import dirname, normpath, join
 import re, os
 from functools import wraps
 
@@ -34,7 +35,7 @@ class GitRepo:
     rootdir = self.git("rev-parse --show-toplevel")
     if self.path != rootdir:
       _, _, path_from_rootdir = self.path.partition(rootdir)
-      return path_from_rootdir + '/' + filename
+      return strip_leading_slashes(join(path_from_rootdir, filename))
     return filename
 
   def branch(self):
@@ -130,12 +131,16 @@ class SvnRepo:
 
 class BeanstalkWindowCommand(sublime_plugin.WindowCommand):
   def rootdir(self):
-    folders = self.window.folders()
-    return [i for i in folders if self.filename().startswith(i + os.sep)][0]
+    if self.filename():
+      return dirname(self.filename())
+    return self.first_folder()
+
+  def first_folder(self):
+    return self.window.folders()[0]
 
   def relative_filename(self):
     _, _, filename = self.filename().partition(self.rootdir())
-    return filename
+    return strip_leading_slashes(filename)
 
   def filename(self):
     return self.window.active_view().file_name()
@@ -154,7 +159,6 @@ class BeanstalkWindowCommand(sublime_plugin.WindowCommand):
 
     raise Exception
 
-
 def with_repo(func):
   @wraps(func)
   def wrapper(self):
@@ -164,9 +168,11 @@ def with_repo(func):
       sublime.message_dialog("Beanstalk Subversion or Git repository not found.")
   return wrapper
 
+def strip_leading_slashes(path):
+  return path.lstrip('/')
 
 def git_browse_file_url(repository, filepath, branch='master'):
-  return "https://%s/browse/git%s?branch=%s" % (repository, filepath, branch)
+  return "https://%s/browse/git/%s?branch=%s" % (repository, filepath, branch)
 
 def git_blame_file_url(repository, filepath, revision, branch='master'):
   return "https://%s/blame%s?branch=%s&rev=%s" % (repository, filepath, branch, revision)
