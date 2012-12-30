@@ -14,5 +14,9 @@
   {
     "caption": "Beanstalk: Activity",
     "command": "beanstalk_activity"
+  },
+  {
+    "caption": "Beanstalk: Deployments",
+    "command": "beanstalk_deployments"
   }
 ]

@@ -77,6 +77,9 @@ class GitRepo:
   def activity_url(self):
     return activity_url(self.repository_path)
 
+  def deployments_url(self):
+    return deployments_url(self.repository_path)
+
 class SvnRepo:
   def __init__(self, path):
     self.path = path
@@ -135,6 +138,9 @@ class SvnRepo:
   def activity_url(self):
     return activity_url(self.repository_path)
 
+  def deployments_url(self):
+    return deployments_url(self.repository_path)
+
 class BeanstalkWindowCommand(sublime_plugin.WindowCommand):
   def rootdir(self):
     if self.filename():
@@ -189,6 +195,9 @@ def strip_leading_slashes(path):
 
 def activity_url(repository):
   return "https://%s" % (repository)
+
+def deployments_url(repository):
+  return "https://%s/environments" % (repository)
 
 def git_browse_file_url(repository, filepath, branch='master'):
   return "https://%s/browse/git/%s?branch=%s" % (repository, filepath, branch)
