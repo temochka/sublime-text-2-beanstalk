@@ -143,7 +143,9 @@ class BeanstalkWindowCommand(sublime_plugin.WindowCommand):
     return strip_leading_slashes(filename)
 
   def filename(self):
-    return self.window.active_view().file_name()
+    if self.window.active_view():
+      return self.window.active_view().file_name()
+    return None
 
   @property
   def repository(self):
@@ -158,6 +160,14 @@ class BeanstalkWindowCommand(sublime_plugin.WindowCommand):
       pass
 
     raise Exception
+
+def require_file(func):
+  @wraps(func)
+  def wrapper(self):
+    if self.filename():
+      return func(self)
+    sublime.message_dialog("Please open a file first.")
+  return wrapper
 
 def with_repo(func):
   @wraps(func)
