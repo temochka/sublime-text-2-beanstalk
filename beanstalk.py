@@ -3,6 +3,8 @@ from xml.dom.minidom import parseString
 from os.path import dirname, normpath, join
 import re, os
 from functools import wraps
+from pprint import pprint
+from beanstalk_api import ApiClient
 
 class NotASvnRepositoryError(Exception):
   pass
@@ -16,20 +18,21 @@ class NotABeanstalkRepositoryError(Exception):
 class GitRepo:
   def __init__(self, path):
     self.path = path
+
     if not self.is_git():
       raise NotAGitRepositoryError
 
-    self.repository_path = self.repository_path()
+    self.info = self.info()
 
   def git(self, command):
     os.chdir(self.path)
     return os.popen("git %s" % command).read().strip()
 
-  def repository_path(self):
-    repository_path = self.parse_repository(self.git("remote -v"))
-    if not repository_path:
+  def info(self):
+    info = self.parse_remotes(self.git("remote -v"))
+    if not info:
       raise NotABeanstalkRepositoryError
-    return repository_path
+    return info
 
   def path_from_rootdir(self, filename):
     rootdir = self.git("rev-parse --show-toplevel")
@@ -45,17 +48,17 @@ class GitRepo:
     return self.git("rev-parse HEAD")
 
   def browse_file_url(self, filename):
-    return git_browse_file_url(self.repository_path, self.path_from_rootdir(filename), self.branch())
+    return git_browse_file_url(self.info['url'], self.path_from_rootdir(filename), self.branch())
 
   def blame_file_url(self, filename):
-    return git_blame_file_url(self.repository_path, self.path_from_rootdir(filename), self.revision(), self.branch())
+    return git_blame_file_url(self.info['url'], self.path_from_rootdir(filename), self.revision(), self.branch())
 
   def preview_file_url(self, filename):
-    return git_preview_file_url(self.repository_path, self.path_from_rootdir(filename), self.revision(), self.branch())
+    return git_preview_file_url(self.info['url'], self.path_from_rootdir(filename), self.revision(), self.branch())
 
-  def parse_repository(self, remotes):
+  def parse_remotes(self, remotes):
     remotes = list(set(map(lambda l: re.split("\s", l)[1], remotes.splitlines())))
-    return self.make_repository_url(remotes)
+    return self.choose_remote(remotes)
 
   def parse_branch(self, branches):
     p = re.compile("\* (.+)")
@@ -67,18 +70,67 @@ class GitRepo:
     code = os.system('git rev-parse')
     return not code
 
-  def make_repository_url(self, remotes):
+  def choose_remote(self, remotes):
     for r in remotes:
-      if r.startswith('git@') and 'beanstalkapp.com' in r:
-        return r[4:-4].replace(":", "")
-      elif r.startswith('https://') and 'git.beanstalkapp.com' in r:
-        return r[8:-4].replace("git.beanstalkapp.com", "beanstalkapp.com").split("@")[-1]
+      remote = self.parse_remote(r)
+      if remote:
+        return remote
+
+    return None
+
+  def parse_remote(self, remote):
+    if remote.startswith('git@') and 'beanstalkapp.com' in remote:
+      return self.parse_ssh_remote(remote)
+    elif remote.startswith('https://') and 'git.beanstalkapp.com' in remote:
+      return self.parse_http_remote(remote)
+    return None
+
+  def parse_ssh_remote(self, remote):
+    url = remote[4:-4].replace(":", "")
+    protocol = 'ssh'
+    account = url.split('.')[0]
+    name = url.split('/')[-1]
+
+    return {
+      'protocol' : 'ssh',
+      'url' : url,
+      'name' : name,
+      'account' : account
+    }
+
+  def parse_http_remote(self, remote):
+    uri = remote[8:-4].replace("git.beanstalkapp.com", "beanstalkapp.com")
+    url = uri.split("@")[-1]
+    name = url.split('/')[-1]
+    account = url.split('.')[0]
+    username = None
+    password = None
+
+    if '@' in uri:
+      username, password = uri.split("@")[0].split(':')
+
+    return {
+      'protocol' : 'http',
+      'url' : url, 'name' : name,
+      'account' : account,
+      'username' : username,
+      'password' : password
+    }
+
 
   def activity_url(self):
-    return activity_url(self.repository_path)
+    return activity_url(self.info['url'])
 
   def deployments_url(self):
-    return deployments_url(self.repository_path)
+    return deployments_url(self.info['url'])
+
+  def name(self):
+    return self.info['name']
+
+  def repository_id(self):
+    print "#repository_id"
+    client = ApiClient(self.info['account'])
+    pprint(client.repositories())
 
 class SvnRepo:
   def __init__(self, path):
@@ -181,12 +233,20 @@ def require_file(func):
     sublime.message_dialog("Please open a file first.")
   return wrapper
 
+def require_http_credentials(func):
+  @wraps(func)
+  def wrapper(self, repository):
+    if repository.info['username'] and repository.info['password']:
+      return func(self, repository)
+    sublime.message_dialog("HTTP credentials are required to perform this action.")
+  return wrapper
+
 def with_repo(func):
   @wraps(func)
   def wrapper(self):
     try:
       return func(self, self.repository)
-    except Exception:
+    except (NotASvnRepositoryError, NotAGitRepositoryError, NotABeanstalkRepositoryError):
       sublime.message_dialog("Beanstalk Subversion or Git repository not found.")
   return wrapper
 
