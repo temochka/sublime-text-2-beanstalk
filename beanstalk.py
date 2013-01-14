@@ -4,7 +4,16 @@ from os.path import dirname, normpath, join
 import re, os
 from functools import wraps
 from pprint import pprint
-from beanstalk_api import ApiClient
+from beanstalk_api import APIClient
+from osx_keychain import with_osx_keychain_support
+import threading
+import shutil
+import sys
+
+settings = sublime.load_settings('Beanstalk Tools.sublime-settings')
+plugin_dir = os.path.abspath(os.path.dirname(__file__))
+
+################################################################################
 
 class NotASvnRepositoryError(Exception):
   pass
@@ -15,9 +24,12 @@ class NotAGitRepositoryError(Exception):
 class NotABeanstalkRepositoryError(Exception):
   pass
 
+################################################################################
+
 class GitRepo:
   def __init__(self, path):
     self.path = path
+    self._api_client = None
 
     if not self.is_git():
       raise NotAGitRepositoryError
@@ -57,7 +69,7 @@ class GitRepo:
     return git_preview_file_url(self.info['url'], self.path_from_rootdir(filename), self.revision(), self.branch())
 
   def parse_remotes(self, remotes):
-    remotes = list(set(map(lambda l: re.split("\s", l)[1], remotes.splitlines())))
+    remotes = map(lambda l: tuple(re.split("\s", l)[0:2]), remotes.splitlines())
     return self.choose_remote(remotes)
 
   def parse_branch(self, branches):
@@ -71,52 +83,63 @@ class GitRepo:
     return not code
 
   def choose_remote(self, remotes):
-    for r in remotes:
-      remote = self.parse_remote(r)
-      if remote:
-        return remote
+    for remote_alias, remote in remotes:
+      beanstalk_remote = self.parse_remote(remote_alias, remote)
+      if beanstalk_remote:
+        return beanstalk_remote
 
     return None
 
-  def parse_remote(self, remote):
+  def parse_remote(self, remote_alias, remote):
     if remote.startswith('git@') and 'beanstalkapp.com' in remote:
-      return self.parse_ssh_remote(remote)
+      return self.parse_ssh_remote(remote_alias, remote)
     elif remote.startswith('https://') and 'git.beanstalkapp.com' in remote:
-      return self.parse_http_remote(remote)
+      return self.parse_http_remote(remote_alias, remote)
     return None
 
-  def parse_ssh_remote(self, remote):
+  def parse_ssh_remote(self, remote_alias, remote):
     url = remote[4:-4].replace(":", "")
     protocol = 'ssh'
     account = url.split('.')[0]
     name = url.split('/')[-1]
 
     return {
+      'remote_alias': remote_alias,
       'protocol' : 'ssh',
       'url' : url,
-      'name' : name,
-      'account' : account
+      'repository_name' : name,
+      'account' : account,
+      'username' : '',
+      'password' : ''
     }
 
-  def parse_http_remote(self, remote):
+  def parse_http_remote(self, remote_alias, remote):
     uri = remote[8:-4].replace("git.beanstalkapp.com", "beanstalkapp.com")
     url = uri.split("@")[-1]
     name = url.split('/')[-1]
     account = url.split('.')[0]
-    username = None
-    password = None
+    username = ''
+    password = ''
 
     if '@' in uri:
       username, password = uri.split("@")[0].split(':')
 
     return {
+      'remote_alias' : remote_alias,
       'protocol' : 'http',
-      'url' : url, 'name' : name,
+      'url' : url,
+      'repository_name' : name,
       'account' : account,
       'username' : username,
       'password' : password
     }
 
+  def remote_heads(self):
+    return self.parse_heads(self.git('ls-remote -h ' + self.remote_alias()))
+
+  def parse_heads(self, heads):
+    f = lambda l: tuple(re.split("\s", l.replace('refs/heads/', ''))[::-1])
+    return dict(map(f, heads.splitlines()))
 
   def activity_url(self):
     return activity_url(self.info['url'])
@@ -124,13 +147,46 @@ class GitRepo:
   def deployments_url(self):
     return deployments_url(self.info['url'])
 
-  def name(self):
-    return self.info['name']
+  def release_environment_url(self, environment_id):
+    return release_environment_url(self.info['url'], environment_id)
 
-  def repository_id(self):
-    print "#repository_id"
-    client = ApiClient(self.info['account'])
-    pprint(client.repositories())
+  def name(self):
+    return self.info['repository_name']
+
+  def remote_alias(self):
+    return self.info['remote_alias']
+
+  def beanstalk_id(self):
+    repositories = self.api_client.repositories()
+
+    for repository in repositories:
+      if repository['repository']['name'] == self.name():
+        print "Repository ID: %d" % repository['repository']['id']
+        return repository['repository']['id']
+
+    return None
+
+  def environments(self):
+    return self.api_client.environments(self.beanstalk_id())
+
+  def release(self, environment_id, revision, message=""):
+    return self.api_client.release(self.beanstalk_id(), environment_id, revision, message)
+
+  @property
+  def api_client(self):
+    if self._api_client:
+      return self._api_client
+    self._api_client = APIClient(self.info['account'], self.info['username'], self.info['password'])
+    return self._api_client
+
+  def release_thread(self):
+    return GitReleaseThread
+
+  def prepare_release_thread(self):
+    return PrepareGitReleaseThread
+
+  def supports_deployments(self):
+    return true
 
 class SvnRepo:
   def __init__(self, path):
@@ -193,6 +249,73 @@ class SvnRepo:
   def deployments_url(self):
     return deployments_url(self.repository_path)
 
+  def supports_deployments(self):
+    return false
+
+# Threads ######################################################################
+
+class PrepareGitReleaseThread(threading.Thread):
+  def __init__(self, window, repository, on_done):
+    self.repository = repository
+    self.window = window
+    self.on_done = on_done
+
+    threading.Thread.__init__(self)
+
+  def run(self):
+    environments = self.repository.environments()
+    self.environments_list = map(lambda e: e['server_environment']['name'], environments)
+    self.environments_ids = map(lambda e: e['server_environment']['id'], environments)
+    self.environments_dict = dict(map(lambda e: (e['server_environment']['id'], e['server_environment']), environments))
+    self.remote_heads = self.repository.remote_heads()
+
+    def show_quick_panel():
+      if not self.environments_list:
+        sublime.error_message(('%s: There are no environments ' +
+          'to list.') % __name__)
+        return
+      self.window.show_quick_panel(self.environments_list, self.on_environment_done)
+
+    sublime.set_timeout(show_quick_panel, 10)
+
+  def on_environment_done(self, picked):
+    if picked == -1:
+      return
+
+    environment_id = self.environments_ids[picked]
+    self.environment = self.environments_dict[environment_id]
+
+    branch = self.environment['branch_name']
+    self.revision = self.remote_heads[branch]
+
+    print "Environment id: %d" % environment_id
+    print "Revision: %s" % self.revision
+
+    def show_input_panel():
+      self.window.show_input_panel("Enter a deployment note:", "", self.on_message_done, None, None)
+
+    sublime.set_timeout(show_input_panel, 10)
+
+  def on_message_done(self, message):
+    self.on_done(self.environment, self.revision, message)
+
+class GitReleaseThread(threading.Thread):
+  def __init__(self, window, repository, environment_id, revision, message, on_done):
+    self.repository = repository
+    self.window = window
+    self.environment_id = environment_id
+    self.revision = revision
+    self.message = message
+    self.on_done = on_done
+
+    threading.Thread.__init__(self)
+
+  def run(self):
+    release = self.repository.release(self.environment_id, self.revision, self.message)
+
+    self.on_done(release)
+
+# Command ######################################################################
 class BeanstalkWindowCommand(sublime_plugin.WindowCommand):
   def rootdir(self):
     if self.filename():
@@ -223,8 +346,9 @@ class BeanstalkWindowCommand(sublime_plugin.WindowCommand):
     except (NotASvnRepositoryError, NotABeanstalkRepositoryError):
       pass
 
-    raise Exception
+    raise NotABeanstalkRepositoryError
 
+# Decorators ###################################################################
 def require_file(func):
   @wraps(func)
   def wrapper(self):
@@ -238,7 +362,17 @@ def require_http_credentials(func):
   def wrapper(self, repository):
     if repository.info['username'] and repository.info['password']:
       return func(self, repository)
-    sublime.message_dialog("HTTP credentials are required to perform this action.")
+    
+    username, password = get_credentials(repository.info['account'])
+
+    if username and password:
+      repository.info['username'] = username
+      repository.info['password'] = password
+      
+      return func(self, repository)
+    else:
+      sublime.message_dialog("HTTP credentials are required to perform this action.")
+      copy_and_open_default_settings()
   return wrapper
 
 def with_repo(func):
@@ -250,6 +384,39 @@ def with_repo(func):
       sublime.message_dialog("Beanstalk Subversion or Git repository not found.")
   return wrapper
 
+# Misc #########################################################################
+
+@with_osx_keychain_support
+def get_credentials(account):
+  credentials = load_credentials()
+
+  if not credentials:
+    return ('', '')
+
+  if account in credentials:
+    return credentials[account]
+  
+  return ('', '')
+
+# From funcy: https://github.com/Suor/funcy
+def partition(n, step, seq=None):
+  if seq is None:
+    return partition(n, n, step)
+  return [seq[i:i+n] for i in xrange(0, len(seq)-n+1, step)]
+
+def load_credentials():
+  credentials = settings.get('credentials')
+  return dict((account, (user, password)) for account, user, password in partition(3, credentials))
+
+def copy_and_open_default_settings():
+  user_settings_path = join(sublime.packages_path(), 'User', 'Beanstalk Tools.sublime-settings')
+
+  if not os.path.exists(user_settings_path):
+    default_settings_path = join(os.path.abspath(plugin_dir), 'Beanstalk Tools.sublime-settings')
+    shutil.copy(default_settings_path, user_settings_path)
+
+  sublime.active_window().open_file(user_settings_path)
+
 def strip_leading_slashes(path):
   return path.lstrip('/')
 
@@ -258,6 +425,9 @@ def activity_url(repository):
 
 def deployments_url(repository):
   return "https://%s/environments" % (repository)
+
+def release_environment_url(repository, environment_id):
+  return "https://%s/environments/%d" % (repository, environment_id)
 
 def git_browse_file_url(repository, filepath, branch='master'):
   return "https://%s/browse/git/%s?branch=%s" % (repository, filepath, branch)
