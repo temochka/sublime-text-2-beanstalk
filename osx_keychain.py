@@ -8,11 +8,13 @@ from functools import wraps
 
 if sublime.platform() == 'osx':
   def create_keychain_accessor():
-    from ctypes import cdll, util, c_uint32, c_int, c_char_p, c_void_p, POINTER, pointer, byref, Structure, string_at
+    from ctypes import cdll, util, c_uint32, c_int, c_char_p, c_void_p, 
+                       POINTER, pointer, byref, Structure, string_at
     lib_security = cdll.LoadLibrary(util.find_library('Security'))
 
     class SecKeychainAttributeInfo(Structure):
-      _fields_ = [("count", c_uint32), ("tag", POINTER(c_uint32)), ("format", POINTER(c_uint32))]
+      _fields_ = [("count", c_uint32), ("tag", POINTER(c_uint32)),
+                  ("format", POINTER(c_uint32))]
 
     class SecKeychainAttribute(Structure):
       _fields_ = [("tag", c_uint32), ("length", c_uint32), ("data", c_void_p)]
@@ -69,7 +71,8 @@ if sublime.platform() == 'osx':
               username = string_at(attr.data, attr.length)
               password = string_at(password_buf.value, password_buflen.value)
           finally:
-            lib_security.SecKeychainItemFreeAttributesAndData(attrlist_ptr, password_buf)
+            lib_security.SecKeychainItemFreeAttributesAndData(attrlist_ptr, 
+                                                              password_buf)
 
       if not username or not password:
         return ('', '')
