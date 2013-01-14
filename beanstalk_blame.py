@@ -3,6 +3,6 @@ from beanstalk import *
 
 class BeanstalkBlameCommand(BeanstalkWindowCommand):
   @require_file
-  @with_repo
-  def run(self, repo):
-    webbrowser.open_new_tab(repo.blame_file_url(self.relative_filename()))
+  @with_repository
+  def run(self, repository):
+    webbrowser.open_new_tab(repository.blame_file_url(self.relative_filename()))

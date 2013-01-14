@@ -24,6 +24,9 @@ class NotAGitRepositoryError(Exception):
 class NotABeanstalkRepositoryError(Exception):
   pass
 
+class GitCommandError(Exception):
+  pass
+
 # Repositories #################################################################
 
 class GitRepo:
@@ -35,10 +38,18 @@ class GitRepo:
       raise NotAGitRepositoryError
 
     self.info = self.info()
+    pprint(self.info)
 
   def git(self, command):
     os.chdir(self.path)
-    return os.popen("git %s" % command).read().strip()
+    f = os.popen("git %s" % command)
+    output = f.read().strip()
+    exit_code = f.close()
+
+    if exit_code:
+      raise GitCommandError("Failed to execute `git %s` at %s" % \
+                            (command, self.path))
+    return output
 
   def info(self):
     info = self.parse_remotes(self.git("remote -v"))
@@ -272,6 +283,7 @@ class PrepareGitReleaseThread(threading.Thread):
     threading.Thread.__init__(self)
 
   @handle_http_errors_gracefully
+  @handle_vcs_errors_gracefully
   def run(self):
     environments = self.repository.environments()
     self.remote_heads = self.repository.remote_heads()
@@ -325,6 +337,7 @@ class GitReleaseThread(threading.Thread):
     threading.Thread.__init__(self)
 
   @handle_http_errors_gracefully
+  @handle_vcs_errors_gracefully
   def run(self):
     release = self.repository.release(self.environment_id, self.revision,
                                       self.message)
@@ -349,8 +362,7 @@ class BeanstalkWindowCommand(sublime_plugin.WindowCommand):
       return self.window.active_view().file_name()
     return None
 
-  @property
-  def repository(self):
+  def detect_repository(self):
     try:
       return GitRepo(self.rootdir())
     except (NotAGitRepositoryError, NotABeanstalkRepositoryError):
@@ -377,6 +389,8 @@ def require_http_credentials(func):
   def wrapper(self, repository):
     if repository.info['username'] and repository.info['password']:
       return func(self, repository)
+
+    print "Remote-level premissions are not present"
     
     username, password = get_credentials(repository.info['account'])
 
@@ -392,10 +406,11 @@ def require_http_credentials(func):
 
   return wrapper
 
-def with_repo(func):
+def with_repository(func):
   @wraps(func)
   def wrapper(self):
     try:
+      self.repository = self.detect_repository()
       return func(self, self.repository)
     except (NotASvnRepositoryError, NotAGitRepositoryError,
             NotABeanstalkRepositoryError):
@@ -417,9 +432,18 @@ def handle_http_errors_gracefully(func):
           "Oops! Beanstalk API responded with 500 Internal Server Error.")
   return wrapper
 
+def handle_vcs_errors_gracefully(func):
+  @wraps(func)
+  def wrapper(*args):
+    try:
+      return func(*args)
+    except GitCommandError as e:
+      display_error_message(e.__str__())
+  return wrapper
+
 # Misc #########################################################################
 
-# @with_osx_keychain_support
+@with_osx_keychain_support
 def get_credentials(account):
   credentials = load_credentials()
 
@@ -476,11 +500,11 @@ def git_browse_file_url(repository, filepath, branch='master'):
   return "https://%s/browse/git/%s?branch=%s" % (repository, filepath, branch)
 
 def git_blame_file_url(repository, filepath, revision, branch='master'):
-  return "https://%s/blame%s?branch=%s&rev=%s" % \
+  return "https://%s/blame/%s?branch=%s&rev=%s" % \
             (repository, filepath, branch, revision)
 
 def git_preview_file_url(repository, filepath, revision, branch='master'):
-  return "https://%s/previews%s?back_to=file&branch=%s&rev=%s" % \
+  return "https://%s/previews/%s?back_to=file&branch=%s&rev=%s" % \
             (repository, filepath, branch, revision)
 
 def svn_browse_file_url(repository, filepath, branch='master'):
