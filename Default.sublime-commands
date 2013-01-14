@@ -16,7 +16,12 @@
     "command": "beanstalk_activity"
   },
   {
-    "caption": "Beanstalk: Deployments",
+    "caption": "Beanstalk: Release",
+    "command": "beanstalk_deploy"
+
+  },
+  {
+    "caption": "Beanstalk: Release Environments",
     "command": "beanstalk_deployments"
   }
 ]
