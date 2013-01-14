@@ -4,7 +4,7 @@ from os.path import dirname, normpath, join
 import re, os
 from functools import wraps
 from pprint import pprint
-from beanstalk_api import APIClient
+from beanstalk_api import *
 from osx_keychain import with_osx_keychain_support
 import threading
 import shutil
@@ -13,7 +13,7 @@ import sys
 settings = sublime.load_settings('Beanstalk Tools.sublime-settings')
 plugin_dir = os.path.abspath(os.path.dirname(__file__))
 
-################################################################################
+# Errors #######################################################################
 
 class NotASvnRepositoryError(Exception):
   pass
@@ -24,7 +24,7 @@ class NotAGitRepositoryError(Exception):
 class NotABeanstalkRepositoryError(Exception):
   pass
 
-################################################################################
+# Repositories #################################################################
 
 class GitRepo:
   def __init__(self, path):
@@ -60,13 +60,18 @@ class GitRepo:
     return self.git("rev-parse HEAD")
 
   def browse_file_url(self, filename):
-    return git_browse_file_url(self.info['url'], self.path_from_rootdir(filename), self.branch())
+    return git_browse_file_url(self.info['url'],
+                               self.path_from_rootdir(filename), self.branch())
 
   def blame_file_url(self, filename):
-    return git_blame_file_url(self.info['url'], self.path_from_rootdir(filename), self.revision(), self.branch())
+    return git_blame_file_url(
+        self.info['url'], self.path_from_rootdir(filename),
+        self.revision(), self.branch())
 
   def preview_file_url(self, filename):
-    return git_preview_file_url(self.info['url'], self.path_from_rootdir(filename), self.revision(), self.branch())
+    return git_preview_file_url(
+        self.info['url'], self.path_from_rootdir(filename),
+        self.revision(), self.branch())
 
   def parse_remotes(self, remotes):
     remotes = map(lambda l: tuple(re.split("\s", l)[0:2]), remotes.splitlines())
@@ -170,13 +175,15 @@ class GitRepo:
     return self.api_client.environments(self.beanstalk_id())
 
   def release(self, environment_id, revision, message=""):
-    return self.api_client.release(self.beanstalk_id(), environment_id, revision, message)
+    return self.api_client.release(self.beanstalk_id(), environment_id,
+                                   revision, message)
 
   @property
   def api_client(self):
     if self._api_client:
       return self._api_client
-    self._api_client = APIClient(self.info['account'], self.info['username'], self.info['password'])
+    self._api_client = APIClient(self.info['account'], self.info['username'],
+                                 self.info['password'])
     return self._api_client
 
   def release_thread(self):
@@ -216,10 +223,12 @@ class SvnRepo:
     return svn_browse_file_url(self.repository_path, filename, self.branch())
 
   def blame_file_url(self, filename):
-    return svn_blame_file_url(self.repository_path, filename, self.revision(), self.branch())
+    return svn_blame_file_url(self.repository_path, filename,
+                              self.revision(), self.branch())
 
   def preview_file_url(self, filename):
-    return svn_preview_file_url(self.repository_path, filename, self.revision(), self.branch())
+    return svn_preview_file_url(self.repository_path, filename,
+                                self.revision(), self.branch())
 
   def parse_repository(self, info):
     dom = parseString(info)
@@ -262,20 +271,24 @@ class PrepareGitReleaseThread(threading.Thread):
 
     threading.Thread.__init__(self)
 
+  @handle_http_errors_gracefully
   def run(self):
     environments = self.repository.environments()
-    self.environments_list = map(lambda e: e['server_environment']['name'], environments)
-    self.environments_ids = map(lambda e: e['server_environment']['id'], environments)
-    self.environments_dict = dict(map(lambda e: (e['server_environment']['id'], e['server_environment']), environments))
     self.remote_heads = self.repository.remote_heads()
+    self.environments_list = map(lambda e: e['server_environment']['name'],
+                                 environments)
+    self.environments_ids = map(lambda e: e['server_environment']['id'],
+                                environments)
+    self.environments_dict = dict(map(
+        lambda e: (e['server_environment']['id'], e['server_environment']),
+        environments))
 
     def show_quick_panel():
       if not self.environments_list:
-        sublime.error_message(('%s: There are no environments ' +
-          'to list.') % __name__)
+        sublime.error_message('There are no environments to list.')
         return
-      self.window.show_quick_panel(self.environments_list, self.on_environment_done)
-
+      self.window.show_quick_panel(self.environments_list, 
+                                   self.on_environment_done)
     sublime.set_timeout(show_quick_panel, 10)
 
   def on_environment_done(self, picked):
@@ -288,19 +301,20 @@ class PrepareGitReleaseThread(threading.Thread):
     branch = self.environment['branch_name']
     self.revision = self.remote_heads[branch]
 
-    print "Environment id: %d" % environment_id
+    print "Environment ID: %d" % environment_id
     print "Revision: %s" % self.revision
 
     def show_input_panel():
-      self.window.show_input_panel("Enter a deployment note:", "", self.on_message_done, None, None)
-
+      self.window.show_input_panel("Enter a deployment note:", "", 
+                                   self.on_message_done, None, None)
     sublime.set_timeout(show_input_panel, 10)
 
   def on_message_done(self, message):
     self.on_done(self.environment, self.revision, message)
 
 class GitReleaseThread(threading.Thread):
-  def __init__(self, window, repository, environment_id, revision, message, on_done):
+  def __init__(self, window, repository, environment_id, revision, message,
+               on_done):
     self.repository = repository
     self.window = window
     self.environment_id = environment_id
@@ -310,9 +324,10 @@ class GitReleaseThread(threading.Thread):
 
     threading.Thread.__init__(self)
 
+  @handle_http_errors_gracefully
   def run(self):
-    release = self.repository.release(self.environment_id, self.revision, self.message)
-
+    release = self.repository.release(self.environment_id, self.revision,
+                                      self.message)
     self.on_done(release)
 
 # Command ######################################################################
@@ -367,12 +382,14 @@ def require_http_credentials(func):
 
     if username and password:
       repository.info['username'] = username
-      repository.info['password'] = password
-      
+      repository.info['password'] = password      
       return func(self, repository)
     else:
-      sublime.message_dialog("HTTP credentials are required to perform this action.")
-      copy_and_open_default_settings()
+      display_error_message(
+        "HTTP credentials are required to perform this action.",
+        copy_and_open_default_settings
+      )
+
   return wrapper
 
 def with_repo(func):
@@ -380,13 +397,29 @@ def with_repo(func):
   def wrapper(self):
     try:
       return func(self, self.repository)
-    except (NotASvnRepositoryError, NotAGitRepositoryError, NotABeanstalkRepositoryError):
-      sublime.message_dialog("Beanstalk Subversion or Git repository not found.")
+    except (NotASvnRepositoryError, NotAGitRepositoryError,
+            NotABeanstalkRepositoryError):
+      sublime.error_message(
+                  "Beanstalk Subversion or Git repository not found at %s." % \
+                  self.rootdir())
+  return wrapper
+
+def handle_http_errors_gracefully(func):
+  @wraps(func)
+  def wrapper(*args):
+    try:
+      return func(*args)
+    except HTTPUnauthorizedError:
+      display_error_message("Invalid Beanstalk API credentials.", 
+                            copy_and_open_default_settings)
+    except HTTPInternalServerError:
+      display_error_message(
+          "Oops! Beanstalk API responded with 500 Internal Server Error.")
   return wrapper
 
 # Misc #########################################################################
 
-@with_osx_keychain_support
+# @with_osx_keychain_support
 def get_credentials(account):
   credentials = load_credentials()
 
@@ -406,13 +439,23 @@ def partition(n, step, seq=None):
 
 def load_credentials():
   credentials = settings.get('credentials')
-  return dict((account, (user, password)) for account, user, password in partition(3, credentials))
+  return dict((account, (user, password))
+      for account, user, password in partition(3, credentials))
+
+def display_error_message(message, on_done = None):
+  def display_error():
+    sublime.error_message(message)
+    if on_done:
+      on_done()
+  sublime.set_timeout(display_error, 10)
 
 def copy_and_open_default_settings():
-  user_settings_path = join(sublime.packages_path(), 'User', 'Beanstalk Tools.sublime-settings')
+  user_settings_path = join(sublime.packages_path(), 'User',
+                            'Beanstalk Tools.sublime-settings')
 
   if not os.path.exists(user_settings_path):
-    default_settings_path = join(os.path.abspath(plugin_dir), 'Beanstalk Tools.sublime-settings')
+    default_settings_path = join(os.path.abspath(plugin_dir),
+                                 'Beanstalk Tools.sublime-settings')
     shutil.copy(default_settings_path, user_settings_path)
 
   sublime.active_window().open_file(user_settings_path)
@@ -433,15 +476,18 @@ def git_browse_file_url(repository, filepath, branch='master'):
   return "https://%s/browse/git/%s?branch=%s" % (repository, filepath, branch)
 
 def git_blame_file_url(repository, filepath, revision, branch='master'):
-  return "https://%s/blame%s?branch=%s&rev=%s" % (repository, filepath, branch, revision)
+  return "https://%s/blame%s?branch=%s&rev=%s" % \
+            (repository, filepath, branch, revision)
 
 def git_preview_file_url(repository, filepath, revision, branch='master'):
-  return "https://%s/previews%s?back_to=file&branch=%s&rev=%s" % (repository, filepath, branch, revision)
+  return "https://%s/previews%s?back_to=file&branch=%s&rev=%s" % \
+            (repository, filepath, branch, revision)
 
 def svn_browse_file_url(repository, filepath, branch='master'):
   return "https://%s/browse/%s%s" % (repository, branch, filepath)
 
 def svn_blame_file_url(repository, filepath, revision, branch='master'):
-  return "https://%s/blame/%s%s?rev=%s" % (repository, branch, filepath, revision)
+  return "https://%s/blame/%s%s?rev=%s" % \
+            (repository, branch, filepath, revision)
 
 svn_preview_file_url = git_preview_file_url
