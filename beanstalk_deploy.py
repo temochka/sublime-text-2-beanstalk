@@ -6,14 +6,10 @@ class BeanstalkDeployCommand(BeanstalkWindowCommand):
   @with_repository
   @require_http_credentials
   def run(self, repository):
-    if not self.repository.supports_deployments:
-      sublime.error_message('Deployments support is not implemented for your repository type yet.')
-      return
-
     thread_type = self.repository.prepare_release_thread()
     thread = thread_type(self.window, self.repository, self.on_preparing_done)
     thread.start()
-    ThreadProgress(thread, "Preparing GIT release", "Done")
+    ThreadProgress(thread, "Preparing Beanstalk release", "Done")
 
   def on_preparing_done(self, environment, revision, message=''):
     def start_release():
@@ -22,7 +18,7 @@ class BeanstalkDeployCommand(BeanstalkWindowCommand):
       thread.start()
       ThreadProgress(thread, "Releasing %s" % revision, "Done")
 
-    msg = "Are you sure want to deploy %s to %s?" % (revision, environment['name'])
+    msg = "Are you sure want to deploy revision %s to %s?" % (revision, environment['name'])
     if sublime.ok_cancel_dialog(msg):
       sublime.set_timeout(start_release, 10)
 
