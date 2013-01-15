@@ -16,6 +16,10 @@
     "command": "beanstalk_activity"
   },
   {
+    "caption": "Beanstalk: Plugin Settings",
+    "command": "beanstalk_plugin_settings"
+  },
+  {
     "caption": "Beanstalk: Release",
     "command": "beanstalk_deploy"
   },
