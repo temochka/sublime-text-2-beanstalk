@@ -12,5 +12,8 @@
   // Store your passwords here on your own risk.
   "credentials": [
     // "domain", "user", "password"
-  ]
+  ],
+
+  // Enabling this will lead to debug output shown in ST2 console
+  "debug_mode" : false
 }
