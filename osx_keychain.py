@@ -8,7 +8,7 @@ from functools import wraps
 
 if sublime.platform() == 'osx':
   def create_keychain_accessor():
-    from ctypes import cdll, util, c_uint32, c_int, c_char_p, c_void_p, 
+    from ctypes import cdll, util, c_uint32, c_int, c_char_p, c_void_p, \
                        POINTER, pointer, byref, Structure, string_at
     lib_security = cdll.LoadLibrary(util.find_library('Security'))
 
@@ -27,7 +27,6 @@ if sublime.platform() == 'osx':
     def keychain_get_credentials(account, username=''):
       password = ''
       account_domain = get_account_domain(account)
-      print "Getting password for account domain: " + account_domain
 
       password_buflen = c_uint32()
       password_buf = c_void_p()
