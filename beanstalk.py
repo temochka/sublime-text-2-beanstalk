@@ -263,7 +263,7 @@ class SvnRepo(BeanstalkRepo):
     branch = strip_leading_slashes(url.replace(root_url, ''))
     repository_name = web_uri.split('/')[-1]
     account = web_uri.split('.')[0]
-    revision = dom.getElementsByTagName("commit")[0].attributes["revision"].value
+    revision = dom.getElementsByTagName("entry")[0].attributes["revision"].value
 
     return {
       'protocol' : 'http',
@@ -323,7 +323,7 @@ class SvnRepo(BeanstalkRepo):
   def remote_revision(self):
     svn_info = self.svn("info %s" % self.info['url'])
     dom = parseString(svn_info)
-    revision = dom.getElementsByTagName("commit")[0].attributes["revision"].value
+    revision = dom.getElementsByTagName("entry")[0].attributes["revision"].value
     return revision
 
   def release_thread(self):
