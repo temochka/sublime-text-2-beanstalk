@@ -170,21 +170,18 @@ class GitRepo(BeanstalkRepo):
     }
 
   def parse_http_remote(self, remote_alias, remote):
+    remote_uri = remote[8:].split("@")[-1]
     uri = remote[8:-4].replace("git.beanstalkapp.com", "beanstalkapp.com")
     url = uri.split("@")[-1]
     name = url.split('/')[-1]
     account = url.split('.')[0]
-    username = ''
-    password = ''
-
-    if '@' in uri:
-      username, password = uri.split("@")[0].split(':') + ['']
+    username, password = extract_http_auth_credentials(uri)
 
     return {
       'remote_alias' : remote_alias,
       'protocol' : 'http',
       'url' : url,
-      'remote_uri' : remote[8:],
+      'remote_uri' : remote_uri,
       'repository_name' : name,
       'account' : account,
       'username' : username,
@@ -609,7 +606,7 @@ def extract_http_auth_credentials(uri):
   username = password = ''
 
   if '@' in uri:
-    username, password = root_uri.split('@')[0].split(':') + ['']
+    username, password = (uri.split('@')[0].split(':') + [''])[:2]
 
   return (username, password)
 
