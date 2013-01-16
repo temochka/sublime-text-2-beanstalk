@@ -1,5 +1,4 @@
 import sublime, sublime_plugin
-from xml.dom.minidom import parseString
 from os.path import dirname, normpath, join
 import re, os
 from functools import wraps
@@ -247,23 +246,23 @@ class SvnRepo(BeanstalkRepo):
   def get_info(self):
     svn_info = self.svn("info")
 
-    return self.parse_svn_info(svn_info)
+    return self.load_svn_info(svn_info)
 
-  def parse_svn_info(self, svn_info):
+  def load_svn_info(self, svn_info):
     if not 'svn.beanstalkapp.com' in svn_info:
       return None
 
-    dom = parseString(svn_info)
+    info = self.parse_svn_info(svn_info)
 
-    root_url = dom.getElementsByTagName('root')[0].firstChild.data
+    root_url = info['Repository Root']
     root_uri = root_url[8:].replace('svn.beanstalkapp.com', 'beanstalkapp.com')
     username, password = extract_http_auth_credentials(root_uri)
     web_uri = root_uri.split('@')[-1]
-    url = dom.getElementsByTagName('url')[0].firstChild.data
+    url = info['URL']
     branch = strip_leading_slashes(url.replace(root_url, ''))
     repository_name = web_uri.split('/')[-1]
     account = web_uri.split('.')[0]
-    revision = dom.getElementsByTagName("entry")[0].attributes["revision"].value
+    revision = int(info['Revision'])
 
     return {
       'protocol' : 'http',
@@ -279,7 +278,10 @@ class SvnRepo(BeanstalkRepo):
 
   def svn(self, command):
     os.chdir(self.path)
-    return os.popen("svn %s --xml" %(command)).read()
+    return os.popen("svn %s" %(command)).read().strip()
+
+  def parse_svn_info(self, svn_info):
+    return dict(tuple(line.split(': ', 1)) for line in svn_info.splitlines())
 
   @property
   def repository_path(self):
@@ -322,8 +324,8 @@ class SvnRepo(BeanstalkRepo):
 
   def remote_revision(self):
     svn_info = self.svn("info %s" % self.info['url'])
-    dom = parseString(svn_info)
-    revision = dom.getElementsByTagName("entry")[0].attributes["revision"].value
+    info = self.parse_svn_info(svn_info)
+    revision = info['Revision']
     return revision
 
   def release_thread(self):
@@ -351,7 +353,7 @@ def require_http_credentials(func):
       return func(self, repository)
 
     log("Remote-level premissions are not present")
-    
+
     username, password = get_credentials(repository.info['account'])
 
     if username and password:
@@ -385,7 +387,7 @@ def handle_http_errors_gracefully(func):
     try:
       return func(*args)
     except HTTPUnauthorizedError:
-      display_error_message("Invalid Beanstalk API credentials.", 
+      display_error_message("Invalid Beanstalk API credentials.",
                             copy_and_open_default_settings)
     except HTTPInternalServerError:
       display_error_message(
@@ -430,7 +432,7 @@ class PrepareGitReleaseThread(threading.Thread):
       if not self.environments_list:
         sublime.error_message('There are no environments to list.')
         return
-      self.window.show_quick_panel(self.environments_list, 
+      self.window.show_quick_panel(self.environments_list,
                                    self.on_environment_done)
     sublime.set_timeout(show_quick_panel, 10)
 
@@ -448,7 +450,7 @@ class PrepareGitReleaseThread(threading.Thread):
     log("Revision: %s" % self.revision)
 
     def show_input_panel():
-      self.window.show_input_panel("Enter a deployment note:", "", 
+      self.window.show_input_panel("Enter a deployment note:", "",
                                    self.on_message_done, None, None)
     sublime.set_timeout(show_input_panel, 10)
 
@@ -499,7 +501,7 @@ class PrepareSvnReleaseThread(threading.Thread):
       if not self.environments_list:
         sublime.error_message('There are no environments to list.')
         return
-      self.window.show_quick_panel(self.environments_list, 
+      self.window.show_quick_panel(self.environments_list,
                                    self.on_environment_done)
     sublime.set_timeout(show_quick_panel, 10)
 
@@ -514,7 +516,7 @@ class PrepareSvnReleaseThread(threading.Thread):
     log("Revision: %s" % self.revision)
 
     def show_input_panel():
-      self.window.show_input_panel("Enter a deployment note:", "", 
+      self.window.show_input_panel("Enter a deployment note:", "",
                                    self.on_message_done, None, None)
     sublime.set_timeout(show_input_panel, 10)
 
@@ -564,7 +566,7 @@ def get_credentials(account):
 
   if account in credentials:
     return credentials[account]
-  
+
   return ('', '')
 
 # From funcy: https://github.com/Suor/funcy
