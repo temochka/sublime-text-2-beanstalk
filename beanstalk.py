@@ -398,8 +398,15 @@ def handle_http_errors_gracefully(func):
                             copy_and_open_default_settings)
     except beanstalk_api.HTTPInternalServerError:
       display_error_message(
-          "Oops! Beanstalk API responded with 500 Internal Server Error." \
-          "Make sure the API is enabled on your Beanstalk account.")
+          "Oops! Beanstalk API responded with 500 Internal Server Error. " \
+          "Please make sure the API is enabled on your Beanstalk account.")
+    except beanstalk_api.HTTPClientError as e:
+      display_error_message(
+          "Oops! It seems like you encountered HTTP client error. " \
+          "Please make sure you have CURL utility installed on your system. " \
+          "%s" % e.__str__())
+    except Exception as e:
+      log("Unknown exception has occured during HTTP call: %s" % e, e.__str__())
   return wrapper
 
 def handle_vcs_errors_gracefully(func):
