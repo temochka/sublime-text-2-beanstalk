@@ -98,7 +98,7 @@ class GitRepo(BeanstalkRepo):
     return self.parse_remotes(self.git("remote -v"))
 
   def path_from_rootdir(self, filename):
-    rootdir = self.git("rev-parse --show-toplevel")
+    rootdir = normpath(self.git("rev-parse --show-toplevel"))
     if self.path != rootdir:
       _, _, path_from_rootdir = self.path.partition(rootdir)
       return strip_leading_slashes(join(path_from_rootdir, filename))
@@ -612,7 +612,7 @@ def extract_http_auth_credentials(uri):
   return (username, password)
 
 def strip_leading_slashes(path):
-  return path.lstrip('/')
+  return path.lstrip(os.sep)
 
 def activity_url(repository):
   return "https://%s" % (repository)
