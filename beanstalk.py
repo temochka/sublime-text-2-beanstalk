@@ -178,7 +178,7 @@ class GitRepo(BeanstalkRepo):
     password = ''
 
     if '@' in uri:
-      username, password = uri.split("@")[0].split(':').append('')
+      username, password = uri.split("@")[0].split(':') + ['']
 
     return {
       'remote_alias' : remote_alias,
@@ -609,7 +609,7 @@ def extract_http_auth_credentials(uri):
   username = password = ''
 
   if '@' in uri:
-    username, password = root_uri.split('@')[0].split(':').append('')
+    username, password = root_uri.split('@')[0].split(':') + ['']
 
   return (username, password)
 
