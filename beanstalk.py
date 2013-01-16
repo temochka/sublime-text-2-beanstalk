@@ -3,9 +3,9 @@ from os.path import dirname, normpath, join
 import re, os
 from functools import wraps
 from pprint import pformat, pprint
-from beanstalk_api import *
 from osx_keychain import with_osx_keychain_support
 import threading
+import beanstalk_api
 import shutil
 import sys
 
@@ -40,8 +40,9 @@ class BeanstalkRepo:
   def api_client(self):
     if self._api_client:
       return self._api_client
-    self._api_client = APIClient(self.info['account'], self.info['username'],
-                                 self.info['password'])
+    self._api_client = beanstalk_api.APIClient(self.info['account'],
+                                               self.info['username'],
+                                               self.info['password'])
     return self._api_client
 
   @property
@@ -392,10 +393,10 @@ def handle_http_errors_gracefully(func):
   def wrapper(*args):
     try:
       return func(*args)
-    except HTTPUnauthorizedError:
+    except beanstalk_api.HTTPUnauthorizedError:
       display_error_message("Invalid Beanstalk API credentials.",
                             copy_and_open_default_settings)
-    except HTTPInternalServerError:
+    except beanstalk_api.HTTPInternalServerError:
       display_error_message(
           "Oops! Beanstalk API responded with 500 Internal Server Error." \
           "Make sure the API is enabled on your Beanstalk account.")
