@@ -84,6 +84,8 @@ class GitRepo(BeanstalkRepo):
 
   def git(self, command):
     os.chdir(self.path)
+    log("Executing `git %s` at %s." % (command, self.path))
+
     f = os.popen("git %s" % command)
     output = f.read().strip()
     exit_code = f.close()
@@ -256,6 +258,7 @@ class SvnRepo(BeanstalkRepo):
     username, password = extract_http_auth_credentials(root_uri)
     web_uri = root_uri.split('@')[-1]
     url = info['URL']
+    uri = url[8:].split('@')[-1]
     branch = strip_leading_slashes(url.replace(root_url, ''), True)
     repository_name = web_uri.split('/')[-1]
     account = web_uri.split('.')[0]
@@ -264,7 +267,7 @@ class SvnRepo(BeanstalkRepo):
     return {
       'protocol' : 'http',
       'web_uri' : web_uri,
-      'url' : url,
+      'uri' : uri,
       'repository_name' : repository_name,
       'branch' : branch,
       'account' : account,
@@ -275,7 +278,8 @@ class SvnRepo(BeanstalkRepo):
 
   def svn(self, command):
     os.chdir(self.path)
-    return os.popen("svn %s" %(command)).read().strip()
+    log("Executing `svn %s` at %s." % (command, self.path))
+    return os.popen("svn %s" % command).read().strip()
 
   def parse_svn_info(self, svn_info):
     return dict(tuple(line.split(': ', 1)) for line in svn_info.splitlines())
@@ -301,6 +305,15 @@ class SvnRepo(BeanstalkRepo):
     return svn_preview_file_url(self.repository_path, filename,
                                 self.revision(), self.branch())
 
+  def deployments_url(self):
+    return deployments_url(self.repository_path)
+
+  def activity_url(self):
+    return activity_url(self.repository_path)
+
+  def release_environment_url(self, environment_id):
+    return release_environment_url(self.info['web_uri'], environment_id)
+
   def is_svn(self):
     os.chdir(self.path)
     code = os.system('svn info')
@@ -310,17 +323,16 @@ class SvnRepo(BeanstalkRepo):
   def name(self):
     return self.info['repository_name']
 
-  def activity_url(self):
-    return activity_url(self.repository_path)
-
-  def deployments_url(self):
-    return deployments_url(self.repository_path)
+  @property
+  def uri_with_basic_auth(self):
+    return "https://%s:%s@%s" % (self.info['username'], self.info['password'],
+                                 self.info['uri'])
 
   def supports_deployments(self):
     return true
 
   def remote_revision(self):
-    svn_info = self.svn("info %s" % self.info['url'])
+    svn_info = self.svn("info %s" % self.uri_with_basic_auth)
     info = self.parse_svn_info(svn_info)
     revision = info['Revision']
     return revision
@@ -330,9 +342,6 @@ class SvnRepo(BeanstalkRepo):
 
   def prepare_release_thread(self):
     return PrepareSvnReleaseThread
-
-  def release_environment_url(self, environment_id):
-    return release_environment_url(self.info['web_uri'], environment_id)
 
 # Decorators ###################################################################
 def require_file(func):
@@ -349,7 +358,7 @@ def require_http_credentials(func):
     if repository.info['username'] and repository.info['password']:
       return func(self, repository)
 
-    log("Remote-level premissions are not present")
+    log("Working copy level premissions are not present.")
 
     username, password = get_credentials(repository.info['account'])
 
