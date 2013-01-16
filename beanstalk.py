@@ -259,7 +259,7 @@ class SvnRepo(BeanstalkRepo):
     username, password = extract_http_auth_credentials(root_uri)
     web_uri = root_uri.split('@')[-1]
     url = info['URL']
-    branch = strip_leading_slashes(url.replace(root_url, ''))
+    branch = strip_leading_slashes(url.replace(root_url, ''), True)
     repository_name = web_uri.split('/')[-1]
     account = web_uri.split('.')[0]
     revision = int(info['Revision'])
@@ -613,8 +613,12 @@ def extract_http_auth_credentials(uri):
 
   return (username, password)
 
-def strip_leading_slashes(path):
-  return path.lstrip(os.sep)
+def strip_leading_slashes(path, unix_only=False):
+  if unix_only:
+    slash = '/'
+  else:
+    slash = os.sep
+  return path.lstrip(slash)
 
 def activity_url(repository):
   return "https://%s" % (repository)
