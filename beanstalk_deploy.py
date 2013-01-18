@@ -6,14 +6,14 @@ class BeanstalkDeployCommand(BeanstalkWindowCommand):
   @with_repository
   @require_http_credentials
   def run(self, repository):
-    thread_type = self.repository.prepare_release_thread()
+    thread_type = self.repository.prepare_release_thread
     thread = thread_type(self.window, self.repository, self.on_preparing_done)
     thread.start()
     ThreadProgress(thread, "Preparing for a Beanstalk release", "Done")
 
   def on_preparing_done(self, environment, revision, message=''):
     def start_release():
-      thread_type = self.repository.release_thread()
+      thread_type = self.repository.release_thread
       thread = thread_type(self.window, self.repository, environment['id'], revision, message, self.on_releasing_done)
       thread.start()
       ThreadProgress(thread, "Releasing %s" % revision, "Done")
