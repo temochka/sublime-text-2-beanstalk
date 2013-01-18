@@ -31,7 +31,7 @@ class GitCommandError(Exception):
 
 # Repositories #################################################################
 
-class BeanstalkRepo:
+class BeanstalkRepo(object):
   def __init__(self):
     self._api_client = None
     self._beanstalk_id = None

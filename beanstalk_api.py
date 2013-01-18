@@ -11,7 +11,7 @@ class HTTPInternalServerError(Exception):
 class HTTPClientError(Exception):
   pass
 
-class CurlHTTP:
+class CurlHTTP(object):
   def __init__(self, url, headers):
     self.url = url
     self.headers = headers
@@ -31,7 +31,7 @@ class CurlHTTP:
 
   # Skip HTTP version and parse headers to dictionary
   def parse_headers(self, http_headers):
-    return dict(tuple(header.split(': ')) 
+    return dict(tuple(header.split(': '))
                 for header in http_headers.splitlines()[1:])
 
   def curl(self, method, path, data=''):
@@ -50,7 +50,7 @@ class CurlHTTP:
   def translate_headers(self):
     return ' '.join(['-H "%s: %s"' % (h, v) for h, v in self.headers.items()])
 
-class NativeHTTP:
+class NativeHTTP(object):
   def __init__(self, url, headers):
     self.conn = httplib.HTTPSConnection(url)
     self.headers = headers
@@ -66,7 +66,7 @@ class NativeHTTP:
       raise HTTPUnauthorizedError
 
     data = response.read()
-    
+
     return data
 
 HTTPClient = NativeHTTP
@@ -75,7 +75,7 @@ HTTPClient = NativeHTTP
 if not hasattr(httplib, 'HTTPSConnection'):
   HTTPClient = CurlHTTP
 
-class APIClient:
+class APIClient(object):
   def __init__(self, account, username, password):
     self.account = account
     self.username = username
