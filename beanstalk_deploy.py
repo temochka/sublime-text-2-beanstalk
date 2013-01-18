@@ -9,7 +9,7 @@ class BeanstalkDeployCommand(BeanstalkWindowCommand):
     thread_type = self.repository.prepare_release_thread()
     thread = thread_type(self.window, self.repository, self.on_preparing_done)
     thread.start()
-    ThreadProgress(thread, "Preparing Beanstalk release", "Done")
+    ThreadProgress(thread, "Preparing for a Beanstalk release", "Done")
 
   def on_preparing_done(self, environment, revision, message=''):
     def start_release():
