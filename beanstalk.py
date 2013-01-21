@@ -267,12 +267,12 @@ class GitRepo(BeanstalkRepo):
   def blame_file_url(self, filename):
     return git_blame_file_url(
         self.info['web_uri'], self.path_from_rootdir(filename),
-        self.revision(), self.branch)
+        self.revision, self.branch)
 
   def preview_file_url(self, filename):
     return git_preview_file_url(
         self.info['web_uri'], self.path_from_rootdir(filename),
-        self.revision(), self.branch)
+        self.revision, self.branch)
 
   def activity_url(self):
     return activity_url(self.info['web_uri'])
