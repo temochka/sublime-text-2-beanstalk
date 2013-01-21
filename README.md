@@ -2,16 +2,18 @@
 
 ## Introduction ##
 
-A set of handy tools for using Sublime Text 2 editor with Beanstalkapp (http://beanstalkapp.com).
+A handy toolset for using [Sublime Text 2](http://www.sublimetext.com/2) with [Beanstalkapp](http://beanstalkapp.com). It allows you to open related Beanstalk pages in your browser quickly and perform Beanstalk deployments right from the editor.
 
 ## Usage ##
 
-Open any directory of your Git or Subversion working copy in Sublime Text 2.
+Open a file or directory inside your Git or Subversion repository in Sublime Text 2.
 
 * Press `Ctrl + Shift + P` and select `Beanstalk: Open File` or just press `Ctrl + Shift + ^` to open currently edited file in Beanstalk.
 * Press `Ctrl + Shift + P` and select `Beanstalk: Blame` to open blame for currently edited file in Beanstalk.
 * Press `Ctrl + Shift + P` and select `Beanstalk: Preview` to preview currently edited file in Beanstalk.
-* More features will be available later.
+* Press `Ctrl + Shift + P` and select `Beanstalk: Activity` to see your repository activity in Beanstalk.
+* Press `Ctrl + Shift + P` and select `Beanstalk: Release Environments` to see release environments existing for your repository in Beanstalk.
+* Press `Ctrl + Shift + P` and select `Beanstalk: Release` to initiate a release using Beanstalk deployments feature.
 
 Use `Cmd` instead of `Ctrl` on Mac OS X.
 
@@ -25,6 +27,9 @@ Once you get Package Control installed, restart Sublime Text 2 and bring up the 
 
 ### On Mac ###
 
+* [Install GIT](http://guides.beanstalkapp.com/version-control/git-on-mac.html).
+* Run Terminal app and execute the following to install the plugin:
+
 ```bash
 cd ~/Library/Application\ Support/Sublime\ Text\ 2/Packages/
 git clone git://github.com/temochka/sublime-text-2-beanstalk.git Beanstalk
@@ -32,20 +37,39 @@ git clone git://github.com/temochka/sublime-text-2-beanstalk.git Beanstalk
 
 ### On Linux ###
 
+The plugin was tested on Ubuntu 12.04, but should work on most modern linux distributions.
+
+* [Install GIT](http://guides.beanstalkapp.com/version-control/git-on-linux.html).
+* Install the plugin from your system console:
+
 ```bash
 cd ~/.config/sublime-text-2/Packages/
 git clone git://github.com/temochka/sublime-text-2-beanstalk.git Beanstalk
 ```
 
+* Install [cURL](http://curl.haxx.se) if you want to perform deployments using the plugin. Ubuntu/Debian users can install cURL via apt package manager:
+
+```bash
+sudo apt-get install curl
+```
+
+* Install [Subversion](http://tortoisesvn.net) if needed.
+
 ### On Windows ###
+
+The plugin was tested on Windows XP SP3 with [Tortoise SVN](http://tortoisesvn.net) and [Git SCM](http://git-scm.com/download/win). Binaries of both VCS were added to the system PATH.
+
+* Download and install GIT from [Git SCM website](http://git-scm.com/download/win). Make sure to add GIT binaries into your global PATH.
+* Run Windows command shell and execute the following to install the plugin:
 
 ```
 cd %APPDATA%/Sublime Text 2/Packages/
 git clone git://github.com/temochka/sublime-text-2-beanstalk.git Beanstalk
 ```
 
-Make sure you have included all required binaries (`git`, `svn`) in your PATH.
+* Install [Subversion](http://tortoisesvn.net) if needed.
 
-## Known issues ##
+## Important Notes ##
 
-Only works for Git and Subversion repositories. Mercurial is not supported yet.
+* Only works for Git and Subversion repositories. Mercurial is not supported yet.
+* Linux version of Sublime Text 2 is built without SSL support. The plugin uses cURL utility to communicate with Beanstalk API. Please make sure you have it is installed and included into your system PATH.
