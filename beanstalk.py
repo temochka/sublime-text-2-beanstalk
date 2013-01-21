@@ -90,8 +90,6 @@ def handle_http_errors_gracefully(func):
           "Oops! It seems like you encountered HTTP client error. " \
           "Please make sure you have CURL utility installed on your system. " \
           "%s" % e.__str__())
-    except Exception as e:
-      log("Unknown exception has occured during HTTP call: %s" % e, e.__str__())
   return wrapper
 
 def handle_vcs_errors_gracefully(func):
