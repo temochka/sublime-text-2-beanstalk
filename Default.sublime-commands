@@ -20,11 +20,11 @@
     "command": "beanstalk_plugin_settings"
   },
   {
-    "caption": "Beanstalk: Release",
+    "caption": "Beanstalk: Deploy",
     "command": "beanstalk_deploy"
   },
   {
-    "caption": "Beanstalk: Release Environments",
+    "caption": "Beanstalk: Deployments",
     "command": "beanstalk_deployments"
   }
 ]

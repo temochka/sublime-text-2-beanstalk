@@ -12,8 +12,8 @@ Open a file or directory inside your Git or Subversion repository in Sublime Tex
 * Press `Ctrl + Shift + P` and select `Beanstalk: Blame` to open blame for currently edited file in Beanstalk.
 * Press `Ctrl + Shift + P` and select `Beanstalk: Preview` to preview currently edited file in Beanstalk.
 * Press `Ctrl + Shift + P` and select `Beanstalk: Activity` to see your repository activity in Beanstalk.
-* Press `Ctrl + Shift + P` and select `Beanstalk: Release Environments` to see release environments existing for your repository in Beanstalk.
-* Press `Ctrl + Shift + P` and select `Beanstalk: Release` to initiate a release using Beanstalk deployments feature.
+* Press `Ctrl + Shift + P` and select `Beanstalk: Deployments` to see release environments existing for your repository in Beanstalk.
+* Press `Ctrl + Shift + P` and select `Beanstalk: Deploy` to initiate a release using Beanstalk deployments feature.
 
 Use `Cmd` instead of `Ctrl` on Mac OS X.
 
