@@ -3,8 +3,6 @@ from os.path import dirname, normpath, join
 import re, os
 from functools import wraps
 from pprint import pformat, pprint
-from pipes import quote
-from urllib import quote_plus
 from osx_keychain import with_osx_keychain_support
 import threading
 import beanstalk_api
@@ -254,7 +252,7 @@ class GitRepo(BeanstalkRepo):
 
   @cached_property
   def remote_heads(self):
-    return self.parse_heads(self.git('ls-remote -h ' + quote(self.http_url)))
+    return self.parse_heads(self.git('ls-remote -h ' + shellescape(self.http_url)))
 
   def parse_heads(self, heads):
     f = lambda l: tuple(re.split("\s", l.replace('refs/heads/', ''))[::-1])
@@ -290,7 +288,7 @@ class GitRepo(BeanstalkRepo):
   @property
   def http_url(self):
     return "https://%s:%s@%s" % (self.info['username'],
-                                 quote_plus(self.info['password']),
+                                 self.info['password'],
                                  self.http_uri)
 
   @property
@@ -411,12 +409,12 @@ class SvnRepo(BeanstalkRepo):
   @property
   def uri_with_basic_auth(self):
     return "https://%s:%s@%s" % (self.info['username'],
-                                 quote_plus(self.info['password']),
+                                 self.info['password'],
                                  self.info['uri'])
 
   @cached_property
   def remote_revision(self):
-    svn_info = self.svn("info %s" % quote(self.uri_with_basic_auth))
+    svn_info = self.svn("info %s" % shellescape(self.uri_with_basic_auth))
     info = self.parse_svn_info(svn_info)
     revision = info['Revision']
     return revision
@@ -641,6 +639,13 @@ def strip_leading_slashes(path, unix_only=False):
   else:
     slash = os.sep
   return path.lstrip(slash)
+
+# Taken from Ruby stdlib
+def shellescape(str):
+  if not len(str):
+    return "''"
+  else:
+    return re.sub('([^A-Za-z0-9_\-.,:\/@\n])', "\\\\\\1", str)
 
 def activity_url(repository):
   return "https://%s" % (repository)
