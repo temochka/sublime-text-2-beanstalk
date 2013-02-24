@@ -5,6 +5,7 @@ import re
 import os
 from functools import wraps
 from osx_keychain import with_osx_keychain_support
+from pprint import pformat
 import threading
 import beanstalk_api
 import shutil
