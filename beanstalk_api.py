@@ -1,4 +1,4 @@
-import httplib
+import http.client
 import base64
 import json
 from pipes import quote
@@ -59,7 +59,7 @@ class CurlHTTP(object):
 
 class NativeHTTP(object):
     def __init__(self, url, headers):
-        self.conn = httplib.HTTPSConnection(url)
+        self.conn = http.client.HTTPSConnection(url)
         self.headers = headers
 
     def request(self, method, path, data):
@@ -80,7 +80,7 @@ HTTPClient = NativeHTTP
 
 # Linux version of ST2 is compiled without SSL support, use CURL wrapper
 # instead
-if not hasattr(httplib, 'HTTPSConnection'):
+if not hasattr(http.client, 'HTTPSConnection'):
     HTTPClient = CurlHTTP
 
 

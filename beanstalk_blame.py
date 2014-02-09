@@ -1,7 +1,7 @@
 import sublime
 import sublime_plugin
 import webbrowser
-from beanstalk import *
+from .beanstalk import *
 
 
 class BeanstalkBlameCommand(BeanstalkWindowCommand):

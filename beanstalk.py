@@ -4,10 +4,10 @@ from os.path import dirname, normpath, join
 import re
 import os
 from functools import wraps
-from osx_keychain import with_osx_keychain_support
+from .osx_keychain import with_osx_keychain_support
 from pprint import pformat
 import threading
-import beanstalk_api
+from .beanstalk_api import *
 import shutil
 
 settings = sublime.load_settings('Beanstalk Tools.sublime-settings')

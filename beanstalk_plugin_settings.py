@@ -1,6 +1,6 @@
 import sublime
 import sublime_plugin
-from beanstalk import *
+from .beanstalk import *
 
 
 class BeanstalkPluginSettingsCommand(sublime_plugin.WindowCommand):

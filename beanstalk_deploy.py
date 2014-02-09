@@ -1,8 +1,8 @@
 import sublime
 import sublime_plugin
 import webbrowser
-from beanstalk import *
-from package_control import ThreadProgress
+from .beanstalk import *
+from .package_control import ThreadProgress
 
 
 class BeanstalkDeployCommand(BeanstalkWindowCommand):
