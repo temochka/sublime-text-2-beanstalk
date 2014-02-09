@@ -633,7 +633,7 @@ def log(*lines):
         return
 
     for line in lines:
-        print line
+        print(line)
 
 
 def display_error_message(message, on_done=None):
