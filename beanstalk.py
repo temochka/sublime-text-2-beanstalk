@@ -10,11 +10,15 @@ import threading
 from .beanstalk_api import *
 import shutil
 
-settings = sublime.load_settings('Beanstalk Tools.sublime-settings')
 plugin_dir = os.path.abspath(os.path.dirname(__file__))
+settings = {}
 debug_mode = False
-if settings.get('debug_mode'):
-    debug_mode = settings.get('debug_mode')
+
+def plugin_loaded():
+    global settings, debug_mode
+    settings = sublime.load_settings('Beanstalk Tools.sublime-settings')
+    if settings.get('debug_mode'):
+        debug_mode = settings.get('debug_mode')
 
 # Errors #################################################################
 
