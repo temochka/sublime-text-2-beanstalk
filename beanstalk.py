@@ -235,7 +235,7 @@ class GitRepo(BeanstalkRepo):
         return None
 
     def parse_ssh_remote(self, remote_alias, remote):
-        uri = remote[4:-4].replace(":", "")
+        uri = remote[4:-4]
         protocol = 'ssh'
         account = uri.split('.')[0]
         name = uri.split('/')[-1]
@@ -243,7 +243,7 @@ class GitRepo(BeanstalkRepo):
         return {
             'remote_alias': remote_alias,
             'protocol': 'ssh',
-            'web_uri': uri,
+            'web_uri': uri.replace(':/' + account, '').replace(':', ''),
             'remote_uri': remote,
             'repository_name': name,
             'account': account,
