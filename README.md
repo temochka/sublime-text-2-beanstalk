@@ -1,19 +1,20 @@
-# Sublime Text 2 Beanstalk Tools #
+# Beanstalk Tools For Sublime Text #
 
 ## Introduction ##
 
-A handy toolset for using [Sublime Text 2](http://www.sublimetext.com/2) with [Beanstalkapp](http://beanstalkapp.com). It allows you to open related Beanstalk pages in your browser quickly and perform Beanstalk deployments right from the editor.
+A handy toolset for using [Sublime Text](http://www.sublimetext.com) with [Beanstalkapp](http://beanstalkapp.com). It allows you to quickly open related Beanstalk pages in your browser.
+
+The plugin supports Sublime Text version 2.0 and above.
 
 ## Usage ##
 
-Open a file or directory inside your Git or Subversion repository in Sublime Text 2.
+Open a file or directory inside your Git or Subversion repository in Sublime Text.
 
 * Press `Ctrl + Shift + P` and select `Beanstalk: Open File` or just press `Ctrl + Shift + ^` to open currently edited file in Beanstalk.
 * Press `Ctrl + Shift + P` and select `Beanstalk: Blame` to open blame for currently edited file in Beanstalk.
 * Press `Ctrl + Shift + P` and select `Beanstalk: Preview` to preview currently edited file in Beanstalk.
 * Press `Ctrl + Shift + P` and select `Beanstalk: Activity` to see your repository activity in Beanstalk.
 * Press `Ctrl + Shift + P` and select `Beanstalk: Deployments` to see release environments existing for your repository in Beanstalk.
-* Press `Ctrl + Shift + P` and select `Beanstalk: Deploy` to initiate a release using Beanstalk deployments feature.
 
 Use `Cmd` instead of `Ctrl` on Mac OS X.
 
@@ -23,7 +24,7 @@ Use `Cmd` instead of `Ctrl` on Mac OS X.
 
 The easiest way to install Beanstalk Tools is through Package Control, which can be found at this site: http://wbond.net/sublime_packages/package_control.
 
-Once you get Package Control installed, restart Sublime Text 2 and bring up the Command Palette by pressing `Ctrl + Shift + P`. Select `Package Control: Install Package`, wait while Package Control fetches the latest package list, then select `Beanstalk Tools` from the dropdown. The advantage of using this method is that Package Control will automatically keep the plugin version up to date.
+Once you get Package Control installed, restart Sublime Text and bring up the Command Palette by pressing `Ctrl + Shift + P`. Select `Package Control: Install Package`, wait while Package Control fetches the latest package list, then select `Beanstalk Tools` from the dropdown. The advantage of using this method is that Package Control will automatically keep the plugin version up to date.
 
 ### On Mac ###
 
@@ -47,12 +48,6 @@ cd ~/.config/sublime-text-2/Packages/
 git clone git://github.com/temochka/sublime-text-2-beanstalk.git Beanstalk
 ```
 
-* Install [cURL](http://curl.haxx.se) if you want to perform deployments using the plugin. Ubuntu/Debian users can install cURL via apt package manager:
-
-```bash
-sudo apt-get install curl
-```
-
 * Install [Subversion](http://tortoisesvn.net) if needed.
 
 ### On Windows ###
@@ -68,8 +63,3 @@ git clone git://github.com/temochka/sublime-text-2-beanstalk.git Beanstalk
 ```
 
 * Install [Subversion](http://tortoisesvn.net) if needed.
-
-## Important Notes ##
-
-* Only works for Git and Subversion repositories. Mercurial is not supported yet.
-* Linux version of Sublime Text 2 is built without SSL support. The plugin uses cURL utility to communicate with Beanstalk API. Please make sure you have it is installed and included into your system PATH.
