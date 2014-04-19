@@ -2,7 +2,7 @@
 
 ## Introduction ##
 
-A handy toolset for using [Sublime Text](http://www.sublimetext.com) with [Beanstalkapp](http://beanstalkapp.com). It allows you to quickly open related Beanstalk pages in your browser.
+A handy toolset for using [Sublime Text](http://www.sublimetext.com) with [Beanstalk](http://beanstalkapp.com). It allows you to quickly open related Beanstalk pages in your browser.
 
 The plugin supports Sublime Text version 2.0 and above.
 
@@ -22,9 +22,7 @@ Use `Cmd` instead of `Ctrl` on Mac OS X.
 
 ### With The Package Control Plugin ###
 
-The easiest way to install Beanstalk Tools is through Package Control, which can be found at this site: http://wbond.net/sublime_packages/package_control.
-
-Once you get Package Control installed, restart Sublime Text and bring up the Command Palette by pressing `Ctrl + Shift + P`. Select `Package Control: Install Package`, wait while Package Control fetches the latest package list, then select `Beanstalk Tools` from the dropdown. The advantage of using this method is that Package Control will automatically keep the plugin version up to date.
+The easiest way to install Beanstalk Tools is through [Package Control](https://sublime.wbond.net). Once you get it installed, restart Sublime Text and bring up the Command Palette by pressing `Ctrl + Shift + P`. Select `Package Control: Install Package`, wait while Package Control fetches the latest package list, then select `Beanstalk Tools` from the dropdown. The advantage of using this method is that Package Control will automatically keep the plugin version up to date.
 
 ### On Mac ###
 
