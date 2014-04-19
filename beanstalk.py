@@ -1,9 +1,10 @@
 import threading, shutil, sublime, sublime_plugin, re, os
+import json
 from functools import wraps
 from os.path import dirname, normpath, join
 from pprint import pformat
 
-
+DEFAULT_SETTINGS = {'debug_mode': False}
 plugin_dir = os.path.abspath(os.path.dirname(__file__))
 settings = {}
 debug_mode = False
@@ -393,9 +394,9 @@ def copy_and_open_default_settings():
                               'Beanstalk Tools.sublime-settings')
 
     if not os.path.exists(user_settings_path):
-        default_settings_path = join(os.path.abspath(plugin_dir),
-                                     'Beanstalk Tools.sublime-settings')
-        shutil.copy(default_settings_path, user_settings_path)
+        with open(user_settings_path, 'w') as f:
+            json.dump(DEFAULT_SETTINGS, f, sort_keys=True,
+                      indent=4, separators=(',', ': '))
 
     sublime.active_window().open_file(user_settings_path)
 
