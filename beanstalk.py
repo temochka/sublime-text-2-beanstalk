@@ -1,20 +1,19 @@
-import sublime
-import sublime_plugin
-from os.path import dirname, normpath, join
-import re
-import os
+import threading, shutil, sublime, sublime_plugin, re, os
+import json
 from functools import wraps
-from osx_keychain import with_osx_keychain_support
+from os.path import dirname, normpath, join
 from pprint import pformat
-import threading
-import beanstalk_api
-import shutil
 
-settings = sublime.load_settings('Beanstalk Tools.sublime-settings')
+DEFAULT_SETTINGS = {'debug_mode': False}
 plugin_dir = os.path.abspath(os.path.dirname(__file__))
+settings = {}
 debug_mode = False
-if settings.get('debug_mode'):
-    debug_mode = settings.get('debug_mode')
+
+def plugin_loaded():
+    global settings, debug_mode
+    settings = sublime.load_settings('Beanstalk Tools.sublime-settings')
+    if settings.get('debug_mode'):
+        debug_mode = settings.get('debug_mode')
 
 # Errors #################################################################
 
@@ -45,30 +44,6 @@ def require_file(func):
         sublime.message_dialog("Please open a file first.")
     return wrapper
 
-
-def require_http_credentials(func):
-    @wraps(func)
-    def wrapper(self, repository):
-        if repository.info['username'] and repository.info['password']:
-            return func(self, repository)
-
-        log("Working copy level premissions are not present.")
-
-        username, password = get_credentials(repository.info['account'])
-
-        if username and password:
-            repository.info['username'] = username
-            repository.info['password'] = password
-            return func(self, repository)
-        else:
-            display_error_message(
-                "HTTP credentials are required to perform this action.",
-                copy_and_open_default_settings
-            )
-
-    return wrapper
-
-
 def with_repository(func):
     @wraps(func)
     def wrapper(self):
@@ -80,26 +55,6 @@ def with_repository(func):
             sublime.error_message(
                 "Beanstalk Subversion or Git repository not found at %s." %
                 self.rootdir())
-    return wrapper
-
-
-def handle_http_errors_gracefully(func):
-    @wraps(func)
-    def wrapper(*args):
-        try:
-            return func(*args)
-        except beanstalk_api.HTTPUnauthorizedError:
-            display_error_message("Invalid Beanstalk API credentials.",
-                                  copy_and_open_default_settings)
-        except beanstalk_api.HTTPInternalServerError:
-            display_error_message(
-                "Oops! Beanstalk API responded with 500 Internal Server Error. "
-                "Please make sure the API is enabled on your Beanstalk account.")
-        except beanstalk_api.HTTPClientError as e:
-            display_error_message(
-                "Oops! It seems like you encountered HTTP client error. "
-                "Please make sure you have CURL utility installed on your system. "
-                "%s" % e.__str__())
     return wrapper
 
 
@@ -126,35 +81,7 @@ def cached_property(func):
 
 # Repositories ###########################################################
 
-
-class BeanstalkRepo(object):
-    @cached_property
-    def api_client(self):
-        return beanstalk_api.APIClient(
-            self.info['account'], self.info['username'],
-            self.info['password'])
-
-    @cached_property
-    def beanstalk_id(self):
-        repositories = self.api_client.repositories()
-
-        for repository in repositories:
-            if repository['repository']['name'] == self.name:
-                log("Repository ID: %d" % repository['repository']['id'])
-                return repository['repository']['id']
-
-        return None
-
-    @cached_property
-    def environments(self):
-        return self.api_client.environments(self.beanstalk_id)
-
-    def release(self, environment_id, revision, message=""):
-        return self.api_client.release(self.beanstalk_id, environment_id,
-                                       revision, message)
-
-
-class GitRepo(BeanstalkRepo):
+class GitRepo(object):
     def __init__(self, path):
         self.path = path
 
@@ -166,7 +93,6 @@ class GitRepo(BeanstalkRepo):
         if not self.info:
             raise NotABeanstalkRepositoryError
 
-        BeanstalkRepo.__init__(self)
         log("Parsed GIT repo: ", pformat(self.info))
 
     def git(self, command):
@@ -231,7 +157,7 @@ class GitRepo(BeanstalkRepo):
         return None
 
     def parse_ssh_remote(self, remote_alias, remote):
-        uri = remote[4:-4].replace(":", "")
+        uri = remote[4:-4]
         protocol = 'ssh'
         account = uri.split('.')[0]
         name = uri.split('/')[-1]
@@ -239,7 +165,9 @@ class GitRepo(BeanstalkRepo):
         return {
             'remote_alias': remote_alias,
             'protocol': 'ssh',
-            'web_uri': uri,
+            'web_uri': uri.replace(':/' + account, '')
+                          .replace(':', '')
+                          .replace("git.beanstalkapp.com", "beanstalkapp.com"),
             'remote_uri': remote,
             'repository_name': name,
             'account': account,
@@ -266,10 +194,6 @@ class GitRepo(BeanstalkRepo):
             'password': password
         }
 
-    @cached_property
-    def remote_heads(self):
-        return self.parse_heads(self.git('ls-remote -h ' + shellescape(self.http_url)))
-
     def parse_heads(self, heads):
         f = lambda l: tuple(re.split("\s", l.replace('refs/heads/', ''))[::-1])
         return dict(map(f, heads.splitlines()))
@@ -294,9 +218,6 @@ class GitRepo(BeanstalkRepo):
     def deployments_url(self):
         return deployments_url(self.info['web_uri'])
 
-    def release_environment_url(self, environment_id):
-        return release_environment_url(self.info['web_uri'], environment_id)
-
     @property
     def name(self):
         return self.info['repository_name']
@@ -315,16 +236,8 @@ class GitRepo(BeanstalkRepo):
             return self.info['web_uri'].replace('beanstalkapp.com',
                                                 'git.beanstalkapp.com') + '.git'
 
-    @property
-    def release_thread(self):
-        return ReleaseThread
 
-    @property
-    def prepare_release_thread(self):
-        return PrepareGitReleaseThread
-
-
-class SvnRepo(BeanstalkRepo):
+class SvnRepo(object):
     def __init__(self, path):
         self.path = path
 
@@ -337,7 +250,6 @@ class SvnRepo(BeanstalkRepo):
             raise NotABeanstalkRepositoryError
 
         log("Parsed SVN repository info:", pformat(self.info))
-        BeanstalkRepo.__init__(self)
 
     def get_info(self):
         svn_info = self.svn("info")
@@ -411,9 +323,6 @@ class SvnRepo(BeanstalkRepo):
     def activity_url(self):
         return activity_url(self.repository_path)
 
-    def release_environment_url(self, environment_id):
-        return release_environment_url(self.info['web_uri'], environment_id)
-
     def is_svn(self):
         os.chdir(self.path)
         code = os.system('svn info')
@@ -423,147 +332,6 @@ class SvnRepo(BeanstalkRepo):
     def name(self):
         return self.info['repository_name']
 
-    @property
-    def uri_with_basic_auth(self):
-        return "https://%s:%s@%s" % (self.info['username'],
-                                     self.info['password'],
-                                     self.info['uri'])
-
-    @cached_property
-    def remote_revision(self):
-        svn_info = self.svn("info %s" % shellescape(self.uri_with_basic_auth))
-        info = self.parse_svn_info(svn_info)
-        revision = info['Revision']
-        return revision
-
-    @property
-    def release_thread(self):
-        return ReleaseThread
-
-    @property
-    def prepare_release_thread(self):
-        return PrepareSvnReleaseThread
-
-# Threads ################################################################
-
-
-class PrepareGitReleaseThread(threading.Thread):
-    def __init__(self, window, repository, on_done):
-        self.repository = repository
-        self.window = window
-        self.on_done = on_done
-
-        threading.Thread.__init__(self)
-
-    @handle_http_errors_gracefully
-    @handle_vcs_errors_gracefully
-    def run(self):
-        environments = self.repository.environments
-        self.remote_heads = self.repository.remote_heads
-        self.environments_list = map(lambda e: e['server_environment']['name'],
-                                     environments)
-        self.environments_ids = map(lambda e: e['server_environment']['id'],
-                                    environments)
-        self.environments_dict = dict(map(
-            lambda e: (e['server_environment']['id'], e['server_environment']),
-            environments))
-
-        def show_quick_panel():
-            if not self.environments_list:
-                sublime.error_message('There are no environments to list.')
-                return
-            self.window.show_quick_panel(self.environments_list,
-                                         self.on_environment_done)
-        sublime.set_timeout(show_quick_panel, 10)
-
-    def on_environment_done(self, picked):
-        if picked == -1:
-            return
-
-        environment_id = self.environments_ids[picked]
-        self.environment = self.environments_dict[environment_id]
-
-        branch = self.environment['branch_name']
-        self.revision = self.remote_heads[branch]
-
-        log("Environment ID: %d" % environment_id)
-        log("Revision: %s" % self.revision)
-
-        def show_input_panel():
-            self.window.show_input_panel("Enter a deployment note:", "",
-                                         self.on_message_done, None, None)
-        sublime.set_timeout(show_input_panel, 10)
-
-    def on_message_done(self, message):
-        self.on_done(self.environment, self.revision, message)
-
-
-class ReleaseThread(threading.Thread):
-    def __init__(self, window, repository, environment_id, revision, message,
-                 on_done):
-        self.repository = repository
-        self.window = window
-        self.environment_id = environment_id
-        self.revision = revision
-        self.message = message
-        self.on_done = on_done
-
-        threading.Thread.__init__(self)
-
-    @handle_http_errors_gracefully
-    @handle_vcs_errors_gracefully
-    def run(self):
-        release = self.repository.release(self.environment_id, self.revision,
-                                          self.message)
-        self.on_done(release)
-
-
-class PrepareSvnReleaseThread(threading.Thread):
-    def __init__(self, window, repository, on_done):
-        self.repository = repository
-        self.window = window
-        self.on_done = on_done
-
-        threading.Thread.__init__(self)
-
-    @handle_http_errors_gracefully
-    @handle_vcs_errors_gracefully
-    def run(self):
-        environments = self.repository.environments
-        self.revision = self.repository.remote_revision
-        self.environments_list = map(lambda e: e['server_environment']['name'],
-                                     environments)
-        self.environments_ids = map(lambda e: e['server_environment']['id'],
-                                    environments)
-        self.environments_dict = dict(map(
-            lambda e: (e['server_environment']['id'], e['server_environment']),
-            environments))
-
-        def show_quick_panel():
-            if not self.environments_list:
-                sublime.error_message('There are no environments to list.')
-                return
-            self.window.show_quick_panel(self.environments_list,
-                                         self.on_environment_done)
-        sublime.set_timeout(show_quick_panel, 10)
-
-    def on_environment_done(self, picked):
-        if picked == -1:
-            return
-
-        environment_id = self.environments_ids[picked]
-        self.environment = self.environments_dict[environment_id]
-
-        log("Environment ID: %d" % environment_id)
-        log("Revision: %s" % self.revision)
-
-        def show_input_panel():
-            self.window.show_input_panel("Enter a deployment note:", "",
-                                         self.on_message_done, None, None)
-        sublime.set_timeout(show_input_panel, 10)
-
-    def on_message_done(self, message):
-        self.on_done(self.environment, self.revision, message)
 
 # Command ################################################################
 
@@ -599,22 +367,6 @@ class BeanstalkWindowCommand(sublime_plugin.WindowCommand):
 
         raise NotABeanstalkRepositoryError
 
-# Misc ###################################################################
-
-
-@with_osx_keychain_support
-def get_credentials(account):
-    credentials = load_credentials()
-
-    if not credentials:
-        return ('', '')
-
-    if account in credentials:
-        return credentials[account]
-
-    return ('', '')
-
-
 # From funcy: https://github.com/Suor/funcy
 def partition(n, step, seq=None):
     if seq is None:
@@ -622,18 +374,12 @@ def partition(n, step, seq=None):
     return [seq[i:i + n] for i in xrange(0, len(seq) - n + 1, step)]
 
 
-def load_credentials():
-    credentials = settings.get('credentials')
-    return dict((account, (user, password))
-                for account, user, password in partition(3, credentials))
-
-
 def log(*lines):
     if not debug_mode:
         return
 
     for line in lines:
-        print line
+        print(line)
 
 
 def display_error_message(message, on_done=None):
@@ -649,9 +395,9 @@ def copy_and_open_default_settings():
                               'Beanstalk Tools.sublime-settings')
 
     if not os.path.exists(user_settings_path):
-        default_settings_path = join(os.path.abspath(plugin_dir),
-                                     'Beanstalk Tools.sublime-settings')
-        shutil.copy(default_settings_path, user_settings_path)
+        with open(user_settings_path, 'w') as f:
+            json.dump(DEFAULT_SETTINGS, f, sort_keys=True,
+                      indent=4, separators=(',', ': '))
 
     sublime.active_window().open_file(user_settings_path)
 
@@ -685,10 +431,6 @@ def activity_url(repository):
 
 def deployments_url(repository):
     return "https://%s/environments" % (repository)
-
-
-def release_environment_url(repository, environment_id):
-    return "https://%s/environments/%d" % (repository, environment_id)
 
 
 def git_browse_file_url(repository, filepath, branch='master'):

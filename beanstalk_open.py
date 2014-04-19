@@ -1,7 +1,10 @@
 import sublime
 import sublime_plugin
 import webbrowser
-from beanstalk import *
+try:
+    from .beanstalk import *
+except ValueError:
+    from beanstalk import *
 
 
 class BeanstalkOpenCommand(BeanstalkWindowCommand):

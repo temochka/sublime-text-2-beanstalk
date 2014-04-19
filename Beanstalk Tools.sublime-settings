@@ -1,19 +1,4 @@
 {
-  // Your Beanstalk credentials are only required for Beanstalk: Deploy feature
-  // OSX users can use empty passwords if they have a keychain entry.
-  // Git users can also store their credentials in GIT remote HTTP address, i.e.
-  // $: git remote add beanstalk https://user:password@acc.git.beanstalkapp.com/repo.git
-  //
-  // List your Beanstalk account credentials in the following order:
-  // "domain", "user", "password".
-  // Don't forget to add a comma in the end of each line (except the last line).
-  //
-  // Note: This file is not encrypted and is located under your HOME directory. 
-  // Store your passwords here on your own risk.
-  "credentials": [
-    // "domain", "user", "password"
-  ],
-
-  // Enabling this will lead to debug output shown in ST2 console
+  // Enabling this will lead to debug output shown in ST console
   "debug_mode" : false
 }

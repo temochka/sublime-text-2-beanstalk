@@ -1,6 +1,9 @@
 import sublime
 import sublime_plugin
-from beanstalk import *
+try:
+    from .beanstalk import *
+except ValueError:
+    from beanstalk import *
 
 
 class BeanstalkPluginSettingsCommand(sublime_plugin.WindowCommand):
