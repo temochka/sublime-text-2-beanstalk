@@ -9,7 +9,6 @@ plugin_dir = os.path.abspath(os.path.dirname(__file__))
 settings = {}
 debug_mode = False
 
-
 def plugin_loaded():
     global settings, debug_mode
     settings = sublime.load_settings('Beanstalk Tools.sublime-settings')
