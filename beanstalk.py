@@ -1,5 +1,6 @@
 import threading, shutil, sublime, sublime_plugin, re, os
 import json
+import urllib.parse as urllib
 from functools import wraps
 from os.path import dirname, normpath, join
 from pprint import pformat
@@ -434,17 +435,18 @@ def deployments_url(repository):
 
 
 def git_browse_file_url(repository, filepath, branch='master'):
-    return "https://%s/browse/git/%s?branch=%s" % (repository, filepath, branch)
+    return "https://%s/browse/git/%s?ref=b-%s" % \
+        (repository, filepath, urllib.quote(branch))
 
 
 def git_blame_file_url(repository, filepath, revision, branch='master'):
-    return "https://%s/blame/%s?branch=%s&rev=%s" % \
-        (repository, filepath, branch, revision)
+    return "https://%s/blame/%s?ref=b-%s&rev=%s" % \
+        (repository, filepath, urllib.quote(branch), revision)
 
 
 def git_preview_file_url(repository, filepath, revision, branch='master'):
-    return "https://%s/previews/%s?back_to=file&branch=%s&rev=%s" % \
-        (repository, filepath, branch, revision)
+    return "https://%s/previews/%s?back_to=file&ref=b-%s&rev=%s" % \
+        (repository, filepath, urllib.quote(branch), revision)
 
 
 def svn_browse_file_url(repository, filepath, branch='master'):
